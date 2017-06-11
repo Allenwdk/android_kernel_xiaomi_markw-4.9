@@ -66,7 +66,7 @@ struct jit_ctx {
 	int idx;
 	int epilogue_offset;
 	int *offset;
-	__le32 *image;
+	u32 *image;
 	u32 stack_size;
 };
 
@@ -144,10 +144,9 @@ static inline int epilogue_offset(const struct jit_ctx *ctx)
 /* Stack must be multiples of 16B */
 #define STACK_ALIGN(sz) (((sz) + 15) & ~15)
 
-/* Tail call offset to jump into */
-#define PROLOGUE_OFFSET 7
+#define PROLOGUE_OFFSET 8
 
-static int build_prologue(struct jit_ctx *ctx, bool ebpf_from_cbpf)
+static int build_prologue(struct jit_ctx *ctx)
 {
 	const struct bpf_prog *prog = ctx->prog;
 	const u8 r6 = bpf2a64[BPF_REG_6];
@@ -172,7 +171,7 @@ static int build_prologue(struct jit_ctx *ctx, bool ebpf_from_cbpf)
 	 *                        | ... | BPF prog stack
 	 *                        |     |
 	 *                        +-----+ <= (BPF_FP - prog->aux->stack_depth)
-	 *                        |RSVD | padding
+	 *                        |RSVD | JIT scratchpad
 	 * current A64_SP =>      +-----+ <= (BPF_FP - ctx->stack_size)
 	 *                        |     |
 	 *                        | ... | Function call stack
@@ -208,8 +207,19 @@ static int build_prologue(struct jit_ctx *ctx, bool ebpf_from_cbpf)
 
 	ctx->stack_size = STACK_ALIGN(prog->aux->stack_depth);
 
+	/* 4 byte extra for skb_copy_bits buffer */
+	ctx->stack_size = prog->aux->stack_depth + 4;
+	ctx->stack_size = STACK_ALIGN(ctx->stack_size);
+
 	/* Set up function call stack */
 	emit(A64_SUB_I(1, A64_SP, A64_SP, ctx->stack_size), ctx);
+
+	cur_offset = ctx->idx - idx0;
+	if (cur_offset != PROLOGUE_OFFSET) {
+		pr_err_once("PROLOGUE_OFFSET = %d, expected %d!\n",
+			    cur_offset, PROLOGUE_OFFSET);
+		return -1;
+	}
 	return 0;
 }
 

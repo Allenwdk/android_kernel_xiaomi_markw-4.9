@@ -1282,6 +1282,19 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
 	skb->hdr_len  = 0;
 	skb->nohdr    = 0;
 	atomic_set(&skb_shinfo(skb)->dataref, 1);
+<<<<<<< HEAD
+=======
+
+	skb_metadata_clear(skb);
+
+	/* It is not generally safe to change skb->truesize.
+	 * For the moment, we really care of rx path, or
+	 * when skb is orphaned (not attached to a socket).
+	 */
+	if (!skb->sk || skb->destructor == sock_edemux)
+		skb->truesize += size - osize;
+
+>>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 	return 0;
 
 nofrags:

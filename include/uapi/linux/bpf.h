@@ -760,6 +760,12 @@ union bpf_attr {
  * 	Return
  * 		A 64-bit integer containing the current cgroup id based
  * 		on the cgroup within which the current task is running.
+ *
+ * int bpf_xdp_adjust_meta(xdp_md, delta)
+ *     Adjust the xdp_md.data_meta by delta
+ *     @xdp_md: pointer to xdp_md
+ *     @delta: An positive/negative integer to be added to xdp_md.data_meta
+ *     Return: 0 on success or negative on error
  */
 #define __BPF_FUNC_MAPPER(FN)		\
 	FN(unspec),			\
@@ -1319,7 +1325,7 @@ struct __sk_buff {
 =======
 	__u32 napi_id;
 
-	/* accessed by BPF_PROG_TYPE_sk_skb types */
+	/* Accessed by BPF_PROG_TYPE_sk_skb types from here to ... */
 	__u32 family;
 	__u32 remote_ip4;	/* Stored in network byte order */
 	__u32 local_ip4;	/* Stored in network byte order */
@@ -1333,7 +1339,12 @@ struct __sk_buff {
 >>>>>>> 3bac91948b0f (BACKPORT: flow_dissector: implements flow dissector BPF hook)
 =======
 	__bpf_md_ptr(struct bpf_flow_keys *, flow_keys);
+<<<<<<< HEAD
 >>>>>>> 1ba7edb30678 (bpf: fix pointer offsets in context for 32 bit)
+=======
+	/* ... here. */
+	__u32 data_meta;
+>>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 };
 
 struct bpf_tunnel_key {
@@ -1366,6 +1377,7 @@ enum xdp_action {
 struct xdp_md {
 	__u32 data;
 	__u32 data_end;
+	__u32 data_meta;
 };
 
 enum sk_action {

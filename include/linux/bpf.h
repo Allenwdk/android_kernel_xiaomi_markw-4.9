@@ -195,6 +195,7 @@ enum bpf_reg_type {
 	CONST_PTR_TO_MAP,	 /* reg points to struct bpf_map */
 	PTR_TO_MAP_VALUE,	 /* reg points to map element value */
 	PTR_TO_MAP_VALUE_OR_NULL,/* points to map elem value or NULL */
+<<<<<<< HEAD
 	FRAME_PTR,		 /* reg == frame_pointer */
 	PTR_TO_STACK,		 /* reg == frame_pointer + imm */
 	CONST_IMM,		 /* constant integer value */
@@ -209,6 +210,11 @@ enum bpf_reg_type {
 	 * if (off > 0) menas that 'imm' was added
 	 */
 	PTR_TO_PACKET,
+=======
+	PTR_TO_STACK,		 /* reg == frame_pointer + offset */
+	PTR_TO_PACKET_META,	 /* skb->data - meta_len */
+	PTR_TO_PACKET,		 /* reg points to skb->data */
+>>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 	PTR_TO_PACKET_END,	 /* skb->data + headlen */
 <<<<<<< HEAD
 

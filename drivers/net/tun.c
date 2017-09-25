@@ -1192,6 +1192,192 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 	return skb;
 }
 
+<<<<<<< HEAD
+=======
+static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+			   struct sk_buff *skb, int more)
+{
+	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
+	struct sk_buff_head process_queue;
+	u32 rx_batched = tun->rx_batched;
+	bool rcv = false;
+
+	if (!rx_batched || (!more && skb_queue_empty(queue))) {
+		local_bh_disable();
+		skb_record_rx_queue(skb, tfile->queue_index);
+		netif_receive_skb(skb);
+		local_bh_enable();
+		return;
+	}
+
+	spin_lock(&queue->lock);
+	if (!more || skb_queue_len(queue) == rx_batched) {
+		__skb_queue_head_init(&process_queue);
+		skb_queue_splice_tail_init(queue, &process_queue);
+		rcv = true;
+	} else {
+		__skb_queue_tail(queue, skb);
+	}
+	spin_unlock(&queue->lock);
+
+	if (rcv) {
+		struct sk_buff *nskb;
+
+		local_bh_disable();
+		while ((nskb = __skb_dequeue(&process_queue))) {
+			skb_record_rx_queue(nskb, tfile->queue_index);
+			netif_receive_skb(nskb);
+		}
+		skb_record_rx_queue(skb, tfile->queue_index);
+		netif_receive_skb(skb);
+		local_bh_enable();
+	}
+}
+
+static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
+			      int len, int noblock, bool zerocopy)
+{
+	if ((tun->flags & TUN_TYPE_MASK) != IFF_TAP)
+		return false;
+
+	if (tfile->socket.sk->sk_sndbuf != INT_MAX)
+		return false;
+
+	if (!noblock)
+		return false;
+
+	if (zerocopy)
+		return false;
+
+	if (SKB_DATA_ALIGN(len + TUN_RX_PAD + XDP_PACKET_HEADROOM) +
+	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) > PAGE_SIZE)
+		return false;
+
+	return true;
+}
+
+static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+				     struct tun_file *tfile,
+				     struct iov_iter *from,
+				     struct virtio_net_hdr *hdr,
+				     int len, int *skb_xdp)
+{
+	struct page_frag *alloc_frag = &current->task_frag;
+	struct sk_buff *skb;
+	struct bpf_prog *xdp_prog;
+	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	unsigned int delta = 0;
+	char *buf;
+	size_t copied;
+	bool xdp_xmit = false;
+	int err, pad = TUN_RX_PAD;
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(tun->xdp_prog);
+	if (xdp_prog)
+		pad += TUN_HEADROOM;
+	buflen += SKB_DATA_ALIGN(len + pad);
+	rcu_read_unlock();
+
+	alloc_frag->offset = ALIGN((u64)alloc_frag->offset, SMP_CACHE_BYTES);
+	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
+		return ERR_PTR(-ENOMEM);
+
+	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
+	copied = copy_page_from_iter(alloc_frag->page,
+				     alloc_frag->offset + pad,
+				     len, from);
+	if (copied != len)
+		return ERR_PTR(-EFAULT);
+
+	/* There's a small window that XDP may be set after the check
+	 * of xdp_prog above, this should be rare and for simplicity
+	 * we do XDP on skb in case the headroom is not enough.
+	 */
+	if (hdr->gso_type || !xdp_prog)
+		*skb_xdp = 1;
+	else
+		*skb_xdp = 0;
+
+	local_bh_disable();
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(tun->xdp_prog);
+	if (xdp_prog && !*skb_xdp) {
+		struct xdp_buff xdp;
+		void *orig_data;
+		u32 act;
+
+		xdp.data_hard_start = buf;
+		xdp.data = buf + pad;
+		xdp_set_data_meta_invalid(&xdp);
+		xdp.data_end = xdp.data + len;
+		orig_data = xdp.data;
+		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+
+		switch (act) {
+		case XDP_REDIRECT:
+			get_page(alloc_frag->page);
+			alloc_frag->offset += buflen;
+			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
+			xdp_do_flush_map();
+			if (err)
+				goto err_redirect;
+			rcu_read_unlock();
+			local_bh_enable();
+			return NULL;
+		case XDP_TX:
+			xdp_xmit = true;
+			/* fall through */
+		case XDP_PASS:
+			delta = orig_data - xdp.data;
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto err_xdp;
+		}
+	}
+
+	skb = build_skb(buf, buflen);
+	if (!skb) {
+		rcu_read_unlock();
+		local_bh_enable();
+		return ERR_PTR(-ENOMEM);
+	}
+
+	skb_reserve(skb, pad - delta);
+	skb_put(skb, len + delta);
+	skb_set_owner_w(skb, tfile->socket.sk);
+	get_page(alloc_frag->page);
+	alloc_frag->offset += buflen;
+
+	if (xdp_xmit) {
+		skb->dev = tun->dev;
+		generic_xdp_tx(skb, xdp_prog);
+		rcu_read_unlock();
+		local_bh_enable();
+		return NULL;
+	}
+
+	rcu_read_unlock();
+	local_bh_enable();
+
+	return skb;
+
+err_redirect:
+	put_page(alloc_frag->page);
+err_xdp:
+	rcu_read_unlock();
+	local_bh_enable();
+	this_cpu_inc(tun->pcpu_stats->rx_dropped);
+	return NULL;
+}
+
+>>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 /* Get packet from user space buffer */
 static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			    void *msg_control, struct iov_iter *from,

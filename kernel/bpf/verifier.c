@@ -21,6 +21,8 @@
 #include <linux/vmalloc.h>
 #include <linux/stringify.h>
 
+#include "disasm.h"
+
 static const struct bpf_verifier_ops * const bpf_verifier_ops[] = {
 #define BPF_PROG_TYPE(_id, _name) \
 	[_id] = & _name ## _verifier_ops,
@@ -244,6 +246,7 @@ static void print_verifier_state(struct bpf_verifier_state *state)
 	verbose("\n");
 }
 
+<<<<<<< HEAD
 static const char *const bpf_class_string[] = {
 	[BPF_LD]    = "ld",
 	[BPF_LDX]   = "ldx",
@@ -401,6 +404,10 @@ static void print_bpf_insn(const struct bpf_verifier_env *env,
 }
 
 static int pop_stack(struct bpf_verifier_env *env, int *prev_insn_idx)
+=======
+static int copy_stack_state(struct bpf_verifier_state *dst,
+			    const struct bpf_verifier_state *src)
+>>>>>>> f32d7583ca82 (bpf: move instruction printing into a separate file)
 {
 	struct bpf_verifier_stack_elem *elem;
 	int insn_idx;
@@ -3321,9 +3328,14 @@ static int do_check(struct bpf_verifier_env *env)
 			do_print_state = false;
 		}
 
+<<<<<<< HEAD
 		if (log_level) {
 			verbose("%d: ", insn_idx);
 			print_bpf_insn(env, insn);
+=======
+		if (verifier_log.level) {
+			verbose("%d: ", env->insn_idx);
+>>>>>>> f32d7583ca82 (bpf: move instruction printing into a separate file)
 		}
 
 <<<<<<< HEAD

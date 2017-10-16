@@ -693,8 +693,18 @@ static int check_ctx_access(struct bpf_verifier_env *env, int off, int size,
 	if (env->analyzer_ops)
 		return 0;
 
-	if (env->prog->aux->ops->is_valid_access &&
-	    env->prog->aux->ops->is_valid_access(off, size, t, reg_type)) {
+	if (env->prog->aux->vops->is_valid_access &&
+	    env->prog->aux->vops->is_valid_access(off, size, t, env->prog, &info)) {
+		/* A non zero info.ctx_field_size indicates that this field is a
+		 * candidate for later verifier transformation to load the whole
+		 * field and then apply a mask when accessed with a narrower
+		 * access than actual ctx access size. A zero info.ctx_field_size
+		 * will only allow for whole field access and rejects any other
+		 * type of narrower access.
+		 */
+		env->insn_aux_data[insn_idx].ctx_field_size = info.ctx_field_size;
+		*reg_type = info.reg_type;
+
 		/* remember the offset of last byte accessed in ctx */
 		if (env->prog->aux->max_ctx_offset < off + size)
 			env->prog->aux->max_ctx_offset = off + size;
@@ -1247,8 +1257,8 @@ static int check_call(struct bpf_verifier_env *env, int func_id, int insn_idx)
 		return -EINVAL;
 	}
 
-	if (env->prog->aux->ops->get_func_proto)
-		fn = env->prog->aux->ops->get_func_proto(func_id);
+	if (env->prog->aux->vops->get_func_proto)
+		fn = env->prog->aux->vops->get_func_proto(func_id, env->prog);
 
 	if (!fn) {
 		verbose("unknown func %d\n", func_id);
@@ -3365,7 +3375,8 @@ static void sanitize_dead_code(struct bpf_verifier_env *env)
  */
 static int convert_ctx_accesses(struct bpf_verifier_env *env)
 {
-	const struct bpf_verifier_ops *ops = env->prog->aux->ops;
+	const struct bpf_verifier_ops *ops = env->prog->aux->vops;
+	int i, cnt, size, ctx_field_size, delta = 0;
 	const int insn_cnt = env->prog->len;
 	struct bpf_insn insn_buf[16], *insn;
 	struct bpf_prog *new_prog;
@@ -3533,7 +3544,58 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 			continue;
 		}
 
-		fn = prog->aux->ops->get_func_proto(insn->imm);
+		/* BPF_EMIT_CALL() assumptions in some of the map_gen_lookup
+		 * handlers are currently limited to 64 bit only.
+		 */
+		if (ebpf_jit_enabled() && BITS_PER_LONG == 64 &&
+		    insn->imm == BPF_FUNC_map_lookup_elem) {
+			map_ptr = env->insn_aux_data[i + delta].map_ptr;
+			if (map_ptr == BPF_MAP_PTR_POISON ||
+			    !map_ptr->ops->map_gen_lookup)
+				goto patch_call_imm;
+
+			cnt = map_ptr->ops->map_gen_lookup(map_ptr, insn_buf);
+			if (cnt == 0 || cnt >= ARRAY_SIZE(insn_buf)) {
+				verbose("bpf verifier is misconfigured\n");
+				return -EINVAL;
+			}
+
+			new_prog = bpf_patch_insn_data(env, i + delta, insn_buf,
+						       cnt);
+			if (!new_prog)
+				return -ENOMEM;
+
+			delta += cnt - 1;
+
+			/* keep walking new program and skip insns we just inserted */
+			env->prog = prog = new_prog;
+			insn      = new_prog->insnsi + i + delta;
+			continue;
+		}
+
+		if (insn->imm == BPF_FUNC_redirect_map) {
+			/* Note, we cannot use prog directly as imm as subsequent
+			 * rewrites would still change the prog pointer. The only
+			 * stable address we can use is aux, which also works with
+			 * prog clones during blinding.
+			 */
+			u64 addr = (unsigned long)prog->aux;
+			struct bpf_insn r4_ld[] = {
+				BPF_LD_IMM64(BPF_REG_4, addr),
+				*insn,
+			};
+			cnt = ARRAY_SIZE(r4_ld);
+
+			new_prog = bpf_patch_insn_data(env, i + delta, r4_ld, cnt);
+			if (!new_prog)
+				return -ENOMEM;
+
+			delta    += cnt - 1;
+			env->prog = prog = new_prog;
+			insn      = new_prog->insnsi + i + delta;
+		}
+patch_call_imm:
+		fn = prog->aux->vops->get_func_proto(insn->imm, env->prog);
 		/* all functions that have prototype and verifier allowed
 		 * programs to call them, must be real in-kernel functions
 		 */

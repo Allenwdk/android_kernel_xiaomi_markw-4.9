@@ -162,6 +162,11 @@ enum bpf_reg_type {
 
 struct bpf_prog;
 
+struct bpf_prog_ops {
+	int (*test_run)(struct bpf_prog *prog, const union bpf_attr *kattr,
+		union bpf_attr __user *uattr);
+};
+
 struct bpf_verifier_ops {
 	/* return eBPF function prototype for verification */
 	const struct bpf_func_proto *(*get_func_proto)(enum bpf_func_id func_id);
@@ -173,9 +178,10 @@ struct bpf_verifier_ops {
 				enum bpf_reg_type *reg_type);
 	int (*gen_prologue)(struct bpf_insn *insn, bool direct_write,
 			    const struct bpf_prog *prog);
-	u32 (*convert_ctx_access)(enum bpf_access_type type, int dst_reg,
-				  int src_reg, int ctx_off,
-				  struct bpf_insn *insn, struct bpf_prog *prog);
+	u32 (*convert_ctx_access)(enum bpf_access_type type,
+				  const struct bpf_insn *src,
+				  struct bpf_insn *dst,
+				  struct bpf_prog *prog, u32 *target_size);
 };
 
 struct bpf_prog_type_list {
@@ -189,7 +195,11 @@ struct bpf_prog_aux {
 	u32 used_map_cnt;
 	u32 max_ctx_offset;
 	u32 stack_depth;
-	const struct bpf_verifier_ops *ops;
+	u32 id;
+	struct latch_tree_node ksym_tnode;
+	struct list_head ksym_lnode;
+	const struct bpf_prog_ops *ops;
+	const struct bpf_verifier_ops *vops;
 	struct bpf_map **used_maps;
 	struct bpf_prog *prog;
 	struct user_struct *user;
@@ -302,6 +312,18 @@ void bpf_register_map_type(struct bpf_map_type_list *tl);
 
 extern const struct file_operations bpf_map_fops;
 extern const struct file_operations bpf_prog_fops;
+
+#define BPF_PROG_TYPE(_id, _name) \
+	extern const struct bpf_prog_ops _name ## _prog_ops; \
+	extern const struct bpf_verifier_ops _name ## _verifier_ops;
+#define BPF_MAP_TYPE(_id, _ops) \
+	extern const struct bpf_map_ops _ops;
+#include <linux/bpf_types.h>
+#undef BPF_PROG_TYPE
+#undef BPF_MAP_TYPE
+
+extern const struct bpf_verifier_ops bpf_offload_verifier_ops;
+extern const struct bpf_prog_ops bpf_offload_prog_ops;
 
 struct bpf_prog *bpf_prog_get(u32 ufd);
 struct bpf_prog *bpf_prog_get_type(u32 ufd, enum bpf_prog_type type);

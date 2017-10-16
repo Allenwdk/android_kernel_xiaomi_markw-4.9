@@ -618,26 +618,38 @@ err_put:
 	return err;
 }
 
-static LIST_HEAD(bpf_prog_types);
+static const struct bpf_prog_ops * const bpf_prog_types[] = {
+#define BPF_PROG_TYPE(_id, _name) \
+	[_id] = & _name ## _prog_ops,
+#define BPF_MAP_TYPE(_id, _ops)
+#include <linux/bpf_types.h>
+#undef BPF_PROG_TYPE
+#undef BPF_MAP_TYPE
+};
+
+static const struct bpf_verifier_ops * const bpf_verifier_ops[] = {
+#define BPF_PROG_TYPE(_id, _name) \
+	[_id] = & _name ## _verifier_ops,
+#define BPF_MAP_TYPE(_id, _ops)
+#define BPF_MAP_TYPE(_id, _ops)
+#include <linux/bpf_types.h>
+#undef BPF_PROG_TYPE
+#undef BPF_MAP_TYPE
+};
 
 static int find_prog_type(enum bpf_prog_type type, struct bpf_prog *prog)
 {
 	struct bpf_prog_type_list *tl;
 
-	list_for_each_entry(tl, &bpf_prog_types, list_node) {
-		if (tl->type == type) {
-			prog->aux->ops = tl->ops;
-			prog->type = type;
-			return 0;
-		}
+	if (!bpf_prog_is_dev_bound(prog->aux)) {
+		prog->aux->ops = bpf_prog_types[type];
+		prog->aux->vops = bpf_verifier_ops[type];
+	} else {
+		prog->aux->ops = &bpf_offload_prog_ops;
+		prog->aux->vops = &bpf_offload_verifier_ops;
 	}
-
-	return -EINVAL;
-}
-
-void bpf_register_prog_type(struct bpf_prog_type_list *tl)
-{
-	list_add(&tl->list_node, &bpf_prog_types);
+	prog->type = type;
+	return 0;
 }
 
 /* drop refcnt on maps used by eBPF program and free auxilary data */

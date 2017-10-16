@@ -630,17 +630,6 @@ static const struct bpf_prog_ops * const bpf_prog_types[] = {
 #undef BPF_MAP_TYPE
 };
 
-static const struct bpf_verifier_ops * const bpf_verifier_ops[] = {
-#define BPF_PROG_TYPE(_id, _name) \
-	[_id] = & _name ## _verifier_ops,
-#define BPF_MAP_TYPE(_id, _ops)
-#define BPF_MAP_TYPE(_id, _ops)
-#include <linux/bpf_types.h>
-#undef BPF_PROG_TYPE
-#undef BPF_MAP_TYPE
-};
->>>>>>> ca0f8741b0fc (BACKPORT: bpf: split verifier and program ops)
-
 static int find_prog_type(enum bpf_prog_type type, struct bpf_prog *prog)
 {
 	struct bpf_prog_type_list *tl;
@@ -657,17 +646,10 @@ static int find_prog_type(enum bpf_prog_type type, struct bpf_prog *prog)
 	return -EINVAL;
 }
 
-void bpf_register_prog_type(struct bpf_prog_type_list *tl)
-{
-	list_add(&tl->list_node, &bpf_prog_types);
-=======
-	if (!bpf_prog_is_dev_bound(prog->aux)) {
+	if (!bpf_prog_is_dev_bound(prog->aux))
 		prog->aux->ops = bpf_prog_types[type];
-		prog->aux->vops = bpf_verifier_ops[type];
-	} else {
+	else
 		prog->aux->ops = &bpf_offload_prog_ops;
-		prog->aux->vops = &bpf_offload_verifier_ops;
-	}
 	prog->type = type;
 	return 0;
 >>>>>>> ca0f8741b0fc (BACKPORT: bpf: split verifier and program ops)

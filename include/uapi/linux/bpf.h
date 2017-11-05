@@ -104,11 +104,34 @@ enum bpf_prog_type {
 	BPF_PROG_TYPE_XDP,
 	BPF_PROG_TYPE_PERF_EVENT,
 	BPF_PROG_TYPE_CGROUP_SKB,
+	BPF_PROG_TYPE_CGROUP_SOCK,
+	BPF_PROG_TYPE_LWT_IN,
+	BPF_PROG_TYPE_LWT_OUT,
+	BPF_PROG_TYPE_LWT_XMIT,
+	BPF_PROG_TYPE_SOCK_OPS,
+	BPF_PROG_TYPE_SK_SKB,
+	BPF_PROG_TYPE_CGROUP_DEVICE,
+	BPF_PROG_TYPE_CGROUP_SOCK_ADDR = 18,
 };
 
 enum bpf_attach_type {
 	BPF_CGROUP_INET_INGRESS,
 	BPF_CGROUP_INET_EGRESS,
+	BPF_CGROUP_INET_SOCK_CREATE,
+	BPF_CGROUP_SOCK_OPS,
+	BPF_SK_SKB_STREAM_PARSER,
+	BPF_SK_SKB_STREAM_VERDICT,
+	BPF_CGROUP_DEVICE,
+	BPF_CGROUP_INET4_BIND = 8,
+	BPF_CGROUP_INET6_BIND = 9,
+	BPF_CGROUP_INET4_CONNECT,
+	BPF_CGROUP_INET6_CONNECT,
+	BPF_CGROUP_INET4_POST_BIND,
+	BPF_CGROUP_INET6_POST_BIND,
+	BPF_CGROUP_UDP4_SENDMSG,
+	BPF_CGROUP_UDP6_SENDMSG,
+	BPF_CGROUP_UDP4_RECVMSG = 19,
+	BPF_CGROUP_UDP6_RECVMSG = 20,
 	__MAX_BPF_ATTACH_TYPE
 };
 
@@ -650,6 +673,129 @@ enum xdp_action {
 struct xdp_md {
 	__u32 data;
 	__u32 data_end;
+};
+
+enum sk_action {
+	SK_DROP = 0,
+	SK_PASS,
+};
+
+#define BPF_TAG_SIZE	8
+
+struct bpf_prog_info {
+	__u32 type;
+	__u32 id;
+	__u8  tag[BPF_TAG_SIZE];
+	__u32 jited_prog_len;
+	__u32 xlated_prog_len;
+	__aligned_u64 jited_prog_insns;
+	__aligned_u64 xlated_prog_insns;
+	__u64 load_time;	/* ns since boottime */
+	__u32 created_by_uid;
+	__u32 nr_map_ids;
+	__aligned_u64 map_ids;
+	char name[BPF_OBJ_NAME_LEN];
+} __attribute__((aligned(8)));
+
+struct bpf_map_info {
+	__u32 type;
+	__u32 id;
+	__u32 key_size;
+	__u32 value_size;
+	__u32 max_entries;
+	__u32 map_flags;
+	char  name[BPF_OBJ_NAME_LEN];
+} __attribute__((aligned(8)));
+
+/* User bpf_sock_addr struct to access socket fields and sockaddr struct passed
+ * by user and intended to be used by socket (e.g. to bind to, depends on
+ * attach attach type).
+ */
+struct bpf_sock_addr {
+	__u32 user_family;	/* Allows 4-byte read, but no write. */
+	__u32 user_ip4;		/* Allows 1,2,4-byte read and 4-byte write.
+				 * Stored in network byte order.
+				 */
+	__u32 user_ip6[4];	/* Allows 1,2,4-byte read an 4-byte write.
+				 * Stored in network byte order.
+				 */
+	__u32 user_port;	/* Allows 4-byte read and write.
+				 * Stored in network byte order
+				 */
+	__u32 family;		/* Allows 4-byte read, but no write */
+	__u32 type;		/* Allows 4-byte read, but no write */
+	__u32 protocol;		/* Allows 4-byte read, but no write */
+	__u32 msg_src_ip4;	/* Allows 1,2,4-byte read an 4-byte write.
+				 * Stored in network byte order.
+				 */
+	__u32 msg_src_ip6[4];	/* Allows 1,2,4-byte read an 4-byte write.
+				 * Stored in network byte order.
+				 */
+};
+
+/* User bpf_sock_ops struct to access socket values and specify request ops
+ * and their replies.
+ * Some of this fields are in network (bigendian) byte order and may need
+ * to be converted before use (bpf_ntohl() defined in samples/bpf/bpf_endian.h).
+ * New fields can only be added at the end of this structure
+ */
+struct bpf_sock_ops {
+	__u32 op;
+	union {
+		__u32 reply;
+		__u32 replylong[4];
+	};
+	__u32 family;
+	__u32 remote_ip4;	/* Stored in network byte order */
+	__u32 local_ip4;	/* Stored in network byte order */
+	__u32 remote_ip6[4];	/* Stored in network byte order */
+	__u32 local_ip6[4];	/* Stored in network byte order */
+	__u32 remote_port;	/* Stored in network byte order */
+	__u32 local_port;	/* stored in host byte order */
+};
+
+/* List of known BPF sock_ops operators.
+ * New entries can only be added at the end
+ */
+enum {
+	BPF_SOCK_OPS_VOID,
+	BPF_SOCK_OPS_TIMEOUT_INIT,	/* Should return SYN-RTO value to use or
+					 * -1 if default value should be used
+					 */
+	BPF_SOCK_OPS_RWND_INIT,		/* Should return initial advertized
+					 * window (in packets) or -1 if default
+					 * value should be used
+					 */
+	BPF_SOCK_OPS_TCP_CONNECT_CB,	/* Calls BPF program right before an
+					 * active connection is initialized
+					 */
+	BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB,	/* Calls BPF program when an
+						 * active connection is
+						 * established
+						 */
+	BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,	/* Calls BPF program when a
+						 * passive connection is
+						 * established
+						 */
+	BPF_SOCK_OPS_NEEDS_ECN,		/* If connection's congestion control
+					 * needs ECN
+					 */
+};
+
+#define TCP_BPF_IW		1001	/* Set TCP initial congestion window */
+#define TCP_BPF_SNDCWND_CLAMP	1002	/* Set sndcwnd_clamp */
+
+#define BPF_DEVCG_ACC_MKNOD    (1ULL << 0)
+#define BPF_DEVCG_ACC_READ     (1ULL << 1)
+#define BPF_DEVCG_ACC_WRITE    (1ULL << 2)
+
+#define BPF_DEVCG_DEV_BLOCK    (1ULL << 0)
+#define BPF_DEVCG_DEV_CHAR     (1ULL << 1)
+
+struct bpf_cgroup_dev_ctx {
+	__u32 access_type; /* (access << 16) | type */
+	__u32 major;
+	__u32 minor;
 };
 
 #endif /* _UAPI__LINUX_BPF_H__ */

@@ -964,7 +964,30 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 			bpf_prog_put(prog);
 		cgroup_put(cgrp);
 		break;
-
+	case BPF_CGROUP_INET_SOCK_CREATE:
+	case BPF_CGROUP_INET4_POST_BIND:
+	case BPF_CGROUP_INET6_POST_BIND:
+		ptype = BPF_PROG_TYPE_CGROUP_SOCK;
+		break;
+	case BPF_CGROUP_INET4_BIND:
+	case BPF_CGROUP_INET6_BIND:
+	case BPF_CGROUP_INET4_CONNECT:
+	case BPF_CGROUP_INET6_CONNECT:
+	case BPF_CGROUP_UDP4_SENDMSG:
+	case BPF_CGROUP_UDP6_SENDMSG:
+	case BPF_CGROUP_UDP4_RECVMSG:
+	case BPF_CGROUP_UDP6_RECVMSG:
+		ptype = BPF_PROG_TYPE_CGROUP_SOCK_ADDR;
+		break;
+	case BPF_CGROUP_SOCK_OPS:
+		ptype = BPF_PROG_TYPE_SOCK_OPS;
+		break;
+        case BPF_CGROUP_DEVICE:
+                ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
+                break;
+	case BPF_SK_SKB_STREAM_PARSER:
+	case BPF_SK_SKB_STREAM_VERDICT:
+		return sockmap_get_from_fd(attr, true);
 	default:
 		return -EINVAL;
 	}
@@ -992,7 +1015,30 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 	case BPF_CGROUP_INET_EGRESS:
 		ptype = BPF_PROG_TYPE_CGROUP_SKB;
 		break;
-
+	case BPF_CGROUP_INET_SOCK_CREATE:
+	case BPF_CGROUP_INET4_POST_BIND:
+	case BPF_CGROUP_INET6_POST_BIND:
+		ptype = BPF_PROG_TYPE_CGROUP_SOCK;
+		break;
+	case BPF_CGROUP_INET4_BIND:
+	case BPF_CGROUP_INET6_BIND:
+	case BPF_CGROUP_INET4_CONNECT:
+	case BPF_CGROUP_INET6_CONNECT:
+	case BPF_CGROUP_UDP4_SENDMSG:
+	case BPF_CGROUP_UDP6_SENDMSG:
+	case BPF_CGROUP_UDP4_RECVMSG:
+	case BPF_CGROUP_UDP6_RECVMSG:
+		ptype = BPF_PROG_TYPE_CGROUP_SOCK_ADDR;
+		break;
+	case BPF_CGROUP_SOCK_OPS:
+		ptype = BPF_PROG_TYPE_SOCK_OPS;
+		break;
+        case BPF_CGROUP_DEVICE:
+                ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
+                break;
+	case BPF_SK_SKB_STREAM_PARSER:
+	case BPF_SK_SKB_STREAM_VERDICT:
+		return sockmap_get_from_fd(attr, false);
 	default:
 		return -EINVAL;
 	}

@@ -2470,6 +2470,7 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		if (type != expected_type)
 			goto err_type;
 	} else if (arg_type == ARG_PTR_TO_MEM ||
+		   arg_type == ARG_PTR_TO_MEM_OR_NULL ||
 		   arg_type == ARG_PTR_TO_UNINIT_MEM) {
 >>>>>>> 8fd51c1c0823 (bpf: Add PTR_TO_SOCKET verifier type)
 		expected_type = PTR_TO_STACK;
@@ -2478,10 +2479,15 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		 * happens during stack boundary checking.
 		 */
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if (type == CONST_IMM && reg->imm == 0)
 =======
 		if (register_is_null(reg))
 >>>>>>> e56ba0f4ba01 (bpf: cleanup register_is_null())
+=======
+		if (register_is_null(reg) &&
+		    arg_type == ARG_PTR_TO_MEM_OR_NULL)
+>>>>>>> 3a9c6cc09277 (bpf: introduce ARG_PTR_TO_MEM_OR_NULL)
 			/* final test in check_stack_boundary() */;
 <<<<<<< HEAD
 		else if (type != PTR_TO_PACKET && type != expected_type)

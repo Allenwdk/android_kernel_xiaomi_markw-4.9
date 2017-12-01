@@ -1797,7 +1797,17 @@ static int check_xadd(struct bpf_verifier_env *env, int insn_idx, struct bpf_ins
 
 	/* check whether atomic_add can write into the same memory */
 	return check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
+<<<<<<< HEAD
 				BPF_SIZE(insn->code), BPF_WRITE, -1);
+=======
+				BPF_SIZE(insn->code), BPF_WRITE, -1, true);
+}
+
+/* Does this register contain a constant zero? */
+static bool register_is_null(struct bpf_reg_state *reg)
+{
+	return reg->type == SCALAR_VALUE && tnum_equals_const(reg->var_off, 0);
+>>>>>>> e56ba0f4ba01 (bpf: cleanup register_is_null())
 }
 
 /* when register 'regno' is passed into function that will read 'access_size'
@@ -1808,6 +1818,7 @@ static int check_stack_boundary(struct bpf_verifier_env *env, int regno,
 				int access_size, bool zero_size_allowed,
 				struct bpf_call_arg_meta *meta)
 {
+<<<<<<< HEAD
 	struct bpf_verifier_state *state = &env->cur_state;
 	struct bpf_reg_state *regs = state->regs;
 	int off, i;
@@ -1816,10 +1827,20 @@ static int check_stack_boundary(struct bpf_verifier_env *env, int regno,
 		if (zero_size_allowed && access_size == 0 &&
 		    regs[regno].type == CONST_IMM &&
 		    regs[regno].imm  == 0)
+=======
+	struct bpf_reg_state *reg = cur_regs(env) + regno;
+	struct bpf_verifier_state *state = env->cur_state;
+	int off, i, slot, spi;
+
+	if (reg->type != PTR_TO_STACK) {
+		/* Allow zero-byte read from NULL, regardless of pointer type */
+		if (zero_size_allowed && access_size == 0 &&
+		    register_is_null(reg))
+>>>>>>> e56ba0f4ba01 (bpf: cleanup register_is_null())
 			return 0;
 
 		verbose(env, "R%d type=%s expected=%s\n", regno,
-			reg_type_str[regs[regno].type],
+			reg_type_str[reg->type],
 			reg_type_str[PTR_TO_STACK]);
 		return -EACCES;
 	}
@@ -1828,16 +1849,20 @@ static int check_stack_boundary(struct bpf_verifier_env *env, int regno,
 	off = regs[regno].imm;
 =======
 	/* Only allow fixed-offset stack reads */
-	if (!tnum_is_const(regs[regno].var_off)) {
+	if (!tnum_is_const(reg->var_off)) {
 		char tn_buf[48];
 
-		tnum_strn(tn_buf, sizeof(tn_buf), regs[regno].var_off);
+		tnum_strn(tn_buf, sizeof(tn_buf), reg->var_off);
 		verbose(env, "invalid variable stack read R%d var_off=%s\n",
 			regno, tn_buf);
 		return -EACCES;
 	}
+<<<<<<< HEAD
 	off = regs[regno].off + regs[regno].var_off.value;
 >>>>>>> 79362c5a0fad (bpf: squash of log related commits)
+=======
+	off = reg->off + reg->var_off.value;
+>>>>>>> e56ba0f4ba01 (bpf: cleanup register_is_null())
 	if (off >= 0 || off < -MAX_BPF_STACK || off + access_size > 0 ||
 	    access_size <= 0) {
 		verbose(env, "invalid stack type R%d off=%d access_size=%d\n",
@@ -1973,7 +1998,11 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		 * passed in as argument, it's a CONST_IMM type. Final test
 		 * happens during stack boundary checking.
 		 */
+<<<<<<< HEAD
 		if (type == CONST_IMM && reg->imm == 0)
+=======
+		if (register_is_null(reg))
+>>>>>>> e56ba0f4ba01 (bpf: cleanup register_is_null())
 			/* final test in check_stack_boundary() */;
 <<<<<<< HEAD
 		else if (type != PTR_TO_PACKET && type != expected_type)
@@ -2383,7 +2412,7 @@ static int check_call(struct bpf_verifier_env *env, int func_id, int insn_idx)
 	 * this is required because get_local_storage() can't return an error.
 	 */
 	if (func_id == BPF_FUNC_get_local_storage &&
-	    !register_is_null(regs[BPF_REG_2])) {
+	    !register_is_null(&regs[BPF_REG_2])) {
 		return -EINVAL;
 	}
 

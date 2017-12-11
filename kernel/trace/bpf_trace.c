@@ -741,16 +741,25 @@ out:
 	mutex_unlock(&bpf_event_mutex);
 }
 
-static struct bpf_prog_type_list perf_event_tl = {
-	.ops	= &perf_event_prog_ops,
-	.type	= BPF_PROG_TYPE_PERF_EVENT,
-};
-
-static int __init register_kprobe_prog_ops(void)
+int bpf_event_query_prog_array(struct perf_event *event, void __user *info)
 {
-	bpf_register_prog_type(&kprobe_tl);
-	bpf_register_prog_type(&tracepoint_tl);
-	bpf_register_prog_type(&perf_event_tl);
-	return 0;
+	struct perf_event_query_bpf __user *uquery = info;
+	struct perf_event_query_bpf query = {};
+	int ret;
+
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	if (event->attr.type != PERF_TYPE_TRACEPOINT)
+		return -EINVAL;
+	if (copy_from_user(&query, uquery, sizeof(query)))
+		return -EFAULT;
+
+	mutex_lock(&bpf_event_mutex);
+	ret = bpf_prog_array_copy_info(event->tp_event->prog_array,
+					uquery->ids,
+					query.ids_len,
+					&uquery->prog_cnt);
+	mutex_unlock(&bpf_event_mutex);
+
+	return ret;
 }
-late_initcall(register_kprobe_prog_ops);

@@ -767,6 +767,7 @@ out:
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 static struct bpf_prog_type_list perf_event_tl = {
 	.ops	= &perf_event_prog_ops,
 	.type	= BPF_PROG_TYPE_PERF_EVENT,
@@ -782,6 +783,9 @@ static int __init register_kprobe_prog_ops(void)
 late_initcall(register_kprobe_prog_ops);
 =======
 int bpf_event_query_prog_array(struct perf_event *event, void __user *info)
+=======
+int perf_event_query_prog_array(struct perf_event *event, void __user *info)
+>>>>>>> 02a269141250 (bpf/tracing: fix kernel/events/core.c compilation error)
 {
 	struct perf_event_query_bpf __user *uquery = info;
 	struct perf_event_query_bpf query = {};

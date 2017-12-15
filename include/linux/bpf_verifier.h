@@ -50,9 +50,26 @@ struct bpf_reg_state {
 	 * result in a bad access. These two fields must be last.
 	 * See states_equal()
 	 */
+<<<<<<< HEAD
 	s64 min_value;
 	u64 max_value;
 	bool value_from_signed;
+=======
+	s64 smin_value; /* minimum possible (s64)value */
+	s64 smax_value; /* maximum possible (s64)value */
+	u64 umin_value; /* minimum possible (u64)value */
+	u64 umax_value; /* maximum possible (u64)value */
+	/* Inside the callee two registers can be both PTR_TO_STACK like
+	 * R1=fp-8 and R2=fp-8, but one of them points to this function stack
+	 * while another to the caller's stack. To differentiate them 'frameno'
+	 * is used which is an index in bpf_verifier_state->frame[] array
+	 * pointing to bpf_func_state.
+	 * This field must be second to last, for states_equal() reasons.
+	 */
+	u32 frameno;
+	/* This field must be last, for states_equal() reasons. */
+	enum bpf_reg_liveness live;
+>>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
 };
 
 enum bpf_stack_slot_type {
@@ -66,10 +83,37 @@ enum bpf_stack_slot_type {
 /* state of the program:
  * type of all registers and stack info
  */
-struct bpf_verifier_state {
+struct bpf_func_state {
 	struct bpf_reg_state regs[MAX_BPF_REG];
+<<<<<<< HEAD
 	u8 stack_slot_type[MAX_BPF_STACK];
 	struct bpf_reg_state spilled_regs[MAX_BPF_STACK / BPF_REG_SIZE];
+=======
+	struct bpf_verifier_state *parent;
+	/* index of call instruction that called into this func */
+	int callsite;
+	/* stack frame number of this function state from pov of
+	 * enclosing bpf_verifier_state.
+	 * 0 = main function, 1 = first callee.
+	 */
+	u32 frameno;
+	/* subprog number == index within subprog_stack_depth
+	 * zero == main subprog
+	 */
+	u32 subprogno;
+	/* should be second to last. See copy_func_state() */
+	int allocated_stack;
+	struct bpf_stack_state *stack;
+};
+
+#define MAX_CALL_FRAMES 8
+struct bpf_verifier_state {
+	/* call stack tracking */
+	struct bpf_func_state *frame[MAX_CALL_FRAMES];
+	struct bpf_verifier_state *parent;
+	bool speculative;
+	u32 curframe;
+>>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
 };
 
 /* linked list of verifier states used to prune search */
@@ -152,6 +196,7 @@ struct bpf_verifier_env {
 	struct bpf_verifier_log log;
 
 	u32 subprog_starts[BPF_MAX_SUBPROGS];
+	u16 subprog_stack_depth[BPF_MAX_SUBPROGS + 1];
 	u32 subprog_cnt;
 };
 
@@ -159,7 +204,9 @@ struct bpf_verifier_env {
 =======
 static inline struct bpf_reg_state *cur_regs(struct bpf_verifier_env *env)
 {
-	return env->cur_state->regs;
+	struct bpf_verifier_state *cur = env->cur_state;
+
+	return cur->frame[cur->curframe]->regs;
 }
 
 int bpf_prog_offload_verifier_prep(struct bpf_verifier_env *env);

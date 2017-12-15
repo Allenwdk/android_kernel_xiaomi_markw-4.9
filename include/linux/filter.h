@@ -447,8 +447,16 @@ struct bpf_prog {
 >>>>>>> 58042f9c4148 (bpf: fix net.core.bpf_jit_enable race)
 				gpl_compatible:1, /* Is filter GPL compatible? */
 				cb_access:1,	/* Is control block accessed? */
+<<<<<<< HEAD
 				dst_needed:1;	/* Do we need dst entry? */
 	kmemcheck_bitfield_end(meta);
+=======
+				dst_needed:1,	/* Do we need dst entry? */
+				blinded:1,	/* Was blinded */
+				is_func:1;	/* program is a bpf function */
+	enum bpf_prog_type	type;		/* Type of BPF program */
+	enum bpf_attach_type	expected_attach_type; /* For some prog types */
+>>>>>>> 87b159cb4a05 (bpf: x64: add JIT support for multi-function programs)
 	u32			len;		/* Number of filter blocks */
 	enum bpf_prog_type	type;		/* Type of BPF program */
 	struct bpf_prog_aux	*aux;		/* Auxiliary fields */

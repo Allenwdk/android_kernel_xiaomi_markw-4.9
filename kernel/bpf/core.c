@@ -146,6 +146,7 @@ void __bpf_prog_free(struct bpf_prog *fp)
 	vfree(fp);
 }
 
+<<<<<<< HEAD
 static bool bpf_is_jmp_and_has_target(const struct bpf_insn *insn)
 {
 	return BPF_CLASS(insn->code) == BPF_JMP  &&
@@ -170,6 +171,77 @@ static int bpf_adj_delta_to_off(struct bpf_insn *insn, u32 pos, u32 delta,
 		return -ERANGE;
 	if (!probe_pass)
 		insn->off = off;
+=======
+int bpf_prog_calc_tag(struct bpf_prog *fp)
+{
+	const u32 bits_offset = SHA_MESSAGE_BYTES - sizeof(__be64);
+	u32 raw_size = bpf_prog_tag_scratch_size(fp);
+	u32 digest[SHA_DIGEST_WORDS];
+	u32 ws[SHA_WORKSPACE_WORDS];
+	u32 i, bsize, psize, blocks;
+	struct bpf_insn *dst;
+	bool was_ld_map;
+	u8 *raw, *todo;
+	__be32 *result;
+	__be64 *bits;
+
+	raw = vmalloc(raw_size);
+	if (!raw)
+		return -ENOMEM;
+
+	sha_init(digest);
+	memset(ws, 0, sizeof(ws));
+
+	/* We need to take out the map fd for the digest calculation
+	 * since they are unstable from user space side.
+	 */
+	dst = (void *)raw;
+	for (i = 0, was_ld_map = false; i < fp->len; i++) {
+		dst[i] = fp->insnsi[i];
+		if (!was_ld_map &&
+		    dst[i].code == (BPF_LD | BPF_IMM | BPF_DW) &&
+		    dst[i].src_reg == BPF_PSEUDO_MAP_FD) {
+			was_ld_map = true;
+			dst[i].imm = 0;
+		} else if (was_ld_map &&
+			   dst[i].code == 0 &&
+			   dst[i].dst_reg == 0 &&
+			   dst[i].src_reg == 0 &&
+			   dst[i].off == 0) {
+			was_ld_map = false;
+			dst[i].imm = 0;
+		} else {
+			was_ld_map = false;
+		}
+	}
+
+	psize = bpf_prog_insn_size(fp);
+	memset(&raw[psize], 0, raw_size - psize);
+	raw[psize++] = 0x80;
+
+	bsize  = round_up(psize, SHA_MESSAGE_BYTES);
+	blocks = bsize / SHA_MESSAGE_BYTES;
+	todo   = raw;
+	if (bsize - psize >= sizeof(__be64)) {
+		bits = (__be64 *)(todo + bsize - sizeof(__be64));
+	} else {
+		bits = (__be64 *)(todo + bsize + bits_offset);
+		blocks++;
+	}
+	*bits = cpu_to_be64((psize - 1) << 3);
+
+	while (blocks--) {
+		sha_transform(digest, todo, ws);
+		todo += SHA_MESSAGE_BYTES;
+	}
+
+	result = (__force __be32 *)digest;
+	for (i = 0; i < SHA_DIGEST_WORDS; i++)
+		result[i] = cpu_to_be32(digest[i]);
+	memcpy(fp->tag, result, sizeof(fp->tag));
+
+	vfree(raw);
+>>>>>>> 4793e2890f82 (bpf: add support for bpf_call to interpreter)
 	return 0;
 }
 
@@ -179,6 +251,9 @@ static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta,
 	u32 i, insn_cnt = prog->len + (probe_pass ? delta : 0);
 	struct bpf_insn *insn = prog->insnsi;
 	int ret = 0;
+	bool pseudo_call;
+	u8 code;
+	int off;
 
 	for (i = 0; i < insn_cnt; i++, insn++) {
 		/* In the probing pass we still operate on the original,
@@ -190,11 +265,31 @@ static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta,
 			insn++;
 		}
 
-		if (!bpf_is_jmp_and_has_target(insn))
+		code = insn->code;
+		if (BPF_CLASS(code) != BPF_JMP)
 			continue;
+		if (BPF_OP(code) == BPF_EXIT)
+			continue;
+		if (BPF_OP(code) == BPF_CALL) {
+			if (insn->src_reg == BPF_PSEUDO_CALL)
+				pseudo_call = true;
+			else
+				continue;
+		} else {
+			pseudo_call = false;
+		}
+		off = pseudo_call ? insn->imm : insn->off;
 
 		/* Adjust offset of jmps if we cross patch boundaries. */
-		ret = bpf_adj_delta_to_off(insn, pos, delta, i, probe_pass);
+		if (i < pos && i + off + 1 > pos)
+			off += delta;
+		else if (i > pos + delta && i + off + 1 <= pos + delta)
+			off -= delta;
+		if (pseudo_call)
+			insn->imm = off;
+		else
+			insn->off = off;
+
 		if (ret)
 			break;
 	}
@@ -596,7 +691,11 @@ EXPORT_SYMBOL_GPL(__bpf_call_base);
  *
  * Decode and execute eBPF instructions.
  */
+<<<<<<< HEAD
 static unsigned int __bpf_prog_run(const struct sk_buff *ctx, const struct bpf_insn *insn)
+=======
+static u64 ___bpf_prog_run(u64 *regs, const struct bpf_insn *insn, u64 *stack)
+>>>>>>> 4793e2890f82 (bpf: add support for bpf_call to interpreter)
 {
 	u64 stack[MAX_BPF_STACK / sizeof(u64)];
 	u64 regs[MAX_BPF_REG], tmp;
@@ -657,6 +756,7 @@ static unsigned int __bpf_prog_run(const struct sk_buff *ctx, const struct bpf_i
 		[BPF_ALU64 | BPF_NEG] = &&ALU64_NEG,
 		/* Call instruction */
 		[BPF_JMP | BPF_CALL] = &&JMP_CALL,
+		[BPF_JMP | BPF_CALL_ARGS] = &&JMP_CALL_ARGS,
 		[BPF_JMP | BPF_TAIL_CALL] = &&JMP_TAIL_CALL,
 		/* Jumps */
 		[BPF_JMP | BPF_JA] = &&JMP_JA,
@@ -848,6 +948,13 @@ select_insn:
 		 */
 		BPF_R0 = (__bpf_call_base + insn->imm)(BPF_R1, BPF_R2, BPF_R3,
 						       BPF_R4, BPF_R5);
+		CONT;
+
+	JMP_CALL_ARGS:
+		BPF_R0 = (__bpf_call_base_args + insn->imm)(BPF_R1, BPF_R2,
+							    BPF_R3, BPF_R4,
+							    BPF_R5,
+							    insn + insn->off + 1);
 		CONT;
 
 	JMP_TAIL_CALL: {
@@ -1108,7 +1215,83 @@ load_byte:
 		WARN_RATELIMIT(1, "unknown opcode %02x\n", insn->code);
 		return 0;
 }
+<<<<<<< HEAD
 STACK_FRAME_NON_STANDARD(__bpf_prog_run); /* jump table */
+=======
+STACK_FRAME_NON_STANDARD(___bpf_prog_run); /* jump table */
+
+#define PROG_NAME(stack_size) __bpf_prog_run##stack_size
+#define DEFINE_BPF_PROG_RUN(stack_size) \
+static unsigned int PROG_NAME(stack_size)(const void *ctx, const struct bpf_insn *insn) \
+{ \
+	u64 stack[stack_size / sizeof(u64)]; \
+	u64 regs[MAX_BPF_EXT_REG]; \
+\
+	FP = (u64) (unsigned long) &stack[ARRAY_SIZE(stack)]; \
+	ARG1 = (u64) (unsigned long) ctx; \
+	return ___bpf_prog_run(regs, insn, stack); \
+}
+
+#define PROG_NAME_ARGS(stack_size) __bpf_prog_run_args##stack_size
+#define DEFINE_BPF_PROG_RUN_ARGS(stack_size) \
+static u64 PROG_NAME_ARGS(stack_size)(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5, \
+				      const struct bpf_insn *insn) \
+{ \
+	u64 stack[stack_size / sizeof(u64)]; \
+	u64 regs[MAX_BPF_REG]; \
+\
+	FP = (u64) (unsigned long) &stack[ARRAY_SIZE(stack)]; \
+	BPF_R1 = r1; \
+	BPF_R2 = r2; \
+	BPF_R3 = r3; \
+	BPF_R4 = r4; \
+	BPF_R5 = r5; \
+	return ___bpf_prog_run(regs, insn, stack); \
+}
+
+#define EVAL1(FN, X) FN(X)
+#define EVAL2(FN, X, Y...) FN(X) EVAL1(FN, Y)
+#define EVAL3(FN, X, Y...) FN(X) EVAL2(FN, Y)
+#define EVAL4(FN, X, Y...) FN(X) EVAL3(FN, Y)
+#define EVAL5(FN, X, Y...) FN(X) EVAL4(FN, Y)
+#define EVAL6(FN, X, Y...) FN(X) EVAL5(FN, Y)
+
+EVAL6(DEFINE_BPF_PROG_RUN, 32, 64, 96, 128, 160, 192);
+EVAL6(DEFINE_BPF_PROG_RUN, 224, 256, 288, 320, 352, 384);
+EVAL4(DEFINE_BPF_PROG_RUN, 416, 448, 480, 512);
+
+EVAL6(DEFINE_BPF_PROG_RUN_ARGS, 32, 64, 96, 128, 160, 192);
+EVAL6(DEFINE_BPF_PROG_RUN_ARGS, 224, 256, 288, 320, 352, 384);
+EVAL4(DEFINE_BPF_PROG_RUN_ARGS, 416, 448, 480, 512);
+
+#define PROG_NAME_LIST(stack_size) PROG_NAME(stack_size),
+
+static unsigned int (*interpreters[])(const void *ctx,
+				      const struct bpf_insn *insn) = {
+EVAL6(PROG_NAME_LIST, 32, 64, 96, 128, 160, 192)
+EVAL6(PROG_NAME_LIST, 224, 256, 288, 320, 352, 384)
+EVAL4(PROG_NAME_LIST, 416, 448, 480, 512)
+
+#undef PROG_NAME_LIST
+#define PROG_NAME_LIST(stack_size) PROG_NAME_ARGS(stack_size),
+static u64 (*interpreters_args[])(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5,
+				  const struct bpf_insn *insn) = {
+EVAL6(PROG_NAME_LIST, 32, 64, 96, 128, 160, 192)
+EVAL6(PROG_NAME_LIST, 224, 256, 288, 320, 352, 384)
+EVAL4(PROG_NAME_LIST, 416, 448, 480, 512)
+};
+#undef PROG_NAME_LIST
+void bpf_patch_call_args(struct bpf_insn *insn, u32 stack_depth)
+{
+	stack_depth = max_t(u32, stack_depth, 1);
+	insn->off = (s16) insn->imm;
+	insn->imm = interpreters_args[(round_up(stack_depth, 32) / 32) - 1] -
+		__bpf_call_base_args;
+	insn->code = BPF_JMP | BPF_CALL_ARGS;
+}
+
+};
+>>>>>>> 4793e2890f82 (bpf: add support for bpf_call to interpreter)
 
 #else
 static unsigned int __bpf_prog_ret0_warn(void *ctx,

@@ -58,6 +58,18 @@ struct ctl_table_header;
 /* unused opcode to mark special call to bpf_tail_call() helper */
 #define BPF_TAIL_CALL	0xf0
 
+<<<<<<< HEAD
+=======
+/* unused opcode to mark call to interpreter with arguments */
+#define BPF_CALL_ARGS	0xe0
+
+/* As per nm, we expose JITed images as text (code) section for
+ * kallsyms. That way, tools like perf can find it to match
+ * addresses.
+ */
+#define BPF_SYM_ELF_TYPE	't'
+
+>>>>>>> 4793e2890f82 (bpf: add support for bpf_call to interpreter)
 /* BPF program can access up to 512 bytes of stack space. */
 #define MAX_BPF_STACK	512
 
@@ -647,6 +659,9 @@ bool sk_filter_charge(struct sock *sk, struct sk_filter *fp);
 void sk_filter_uncharge(struct sock *sk, struct sk_filter *fp);
 
 u64 __bpf_call_base(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5);
+#define __bpf_call_base_args \
+	((u64 (*)(u64, u64, u64, u64, u64, const struct bpf_insn *)) \
+	 __bpf_call_base)
 
 struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog);
 bool bpf_helper_changes_skb_data(void *func);

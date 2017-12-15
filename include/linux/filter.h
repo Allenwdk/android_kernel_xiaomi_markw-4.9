@@ -440,6 +440,11 @@ struct bpf_prog {
 	u16			pages;		/* Number of allocated pages */
 	kmemcheck_bitfield_begin(meta);
 	u16			jited:1,	/* Is our filter JIT'ed? */
+<<<<<<< HEAD
+=======
+				jit_requested:1,/* archs need to JIT the prog */
+				locked:1,	/* Program image locked? */
+>>>>>>> 58042f9c4148 (bpf: fix net.core.bpf_jit_enable race)
 				gpl_compatible:1, /* Is filter GPL compatible? */
 				cb_access:1,	/* Is control block accessed? */
 				dst_needed:1;	/* Do we need dst entry? */
@@ -750,7 +755,21 @@ static inline bool bpf_jit_is_ebpf(void)
 # endif
 }
 
+<<<<<<< HEAD
 static inline bool bpf_jit_blinding_enabled(void)
+=======
+static inline bool ebpf_jit_enabled(void)
+{
+	return bpf_jit_enable && bpf_jit_is_ebpf();
+}
+
+static inline bool bpf_prog_ebpf_jited(const struct bpf_prog *fp)
+{
+	return fp->jited && bpf_jit_is_ebpf();
+}
+
+static inline bool bpf_jit_blinding_enabled(struct bpf_prog *prog)
+>>>>>>> 58042f9c4148 (bpf: fix net.core.bpf_jit_enable race)
 {
 	/* These are the prerequisites, should someone ever have the
 	 * idea to call blinding outside of them, we make sure to
@@ -758,7 +777,7 @@ static inline bool bpf_jit_blinding_enabled(void)
 	 */
 	if (!bpf_jit_is_ebpf())
 		return false;
-	if (!bpf_jit_enable)
+	if (!prog->jit_requested)
 		return false;
 	if (!bpf_jit_harden)
 		return false;

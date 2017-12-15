@@ -992,8 +992,29 @@ void bpf_jit_compile(struct bpf_prog *fp)
 	unsigned alloc_size;
 	u8 *target_ptr;
 
+<<<<<<< HEAD
 	if (!bpf_jit_enable)
 		return;
+=======
+	/* If BPF JIT was not enabled then we must fall back to
+	 * the interpreter.
+	 */
+	if (!prog->jit_requested)
+		return orig_prog;
+
+	/* If constant blinding was enabled and we failed during blinding
+	 * then we must fall back to the interpreter. Otherwise, we save
+	 * the new JITed code.
+	 */
+	tmp = bpf_jit_blind_constants(prog);
+
+	if (IS_ERR(tmp))
+		return orig_prog;
+	if (tmp != prog) {
+		tmp_blinded = true;
+		prog = tmp;
+	}
+>>>>>>> 58042f9c4148 (bpf: fix net.core.bpf_jit_enable race)
 
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.skf		= fp;

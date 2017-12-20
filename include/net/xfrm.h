@@ -1803,6 +1803,89 @@ static inline struct xfrm_state *xfrm_input_state(struct sk_buff *skb)
 {
 	return skb->sp->xvec[skb->sp->len - 1];
 }
+<<<<<<< HEAD
+=======
+static inline struct xfrm_offload *xfrm_offload(struct sk_buff *skb)
+{
+	struct sec_path *sp = skb->sp;
+
+	if (!sp || !sp->olen || sp->len != sp->olen)
+		return NULL;
+
+	return &sp->ovec[sp->olen - 1];
+}
+#endif
+
+void __net_init xfrm_dev_init(void);
+
+#ifdef CONFIG_XFRM_OFFLOAD
+struct sk_buff *validate_xmit_xfrm(struct sk_buff *skb, netdev_features_t features);
+int xfrm_dev_state_add(struct net *net, struct xfrm_state *x,
+		       struct xfrm_user_offload *xuo);
+bool xfrm_dev_offload_ok(struct sk_buff *skb, struct xfrm_state *x);
+
+static inline bool xfrm_dst_offload_ok(struct dst_entry *dst)
+{
+	struct xfrm_state *x = dst->xfrm;
+
+	if (!x || !x->type_offload)
+		return false;
+
+	if (x->xso.offload_handle && (x->xso.dev == dst->path->dev) &&
+	    !dst->child->xfrm)
+		return true;
+
+	return false;
+}
+
+static inline void xfrm_dev_state_delete(struct xfrm_state *x)
+{
+	struct xfrm_state_offload *xso = &x->xso;
+
+	if (xso->dev)
+		xso->dev->xfrmdev_ops->xdo_dev_state_delete(x);
+}
+
+static inline void xfrm_dev_state_free(struct xfrm_state *x)
+{
+	struct xfrm_state_offload *xso = &x->xso;
+	 struct net_device *dev = xso->dev;
+
+	if (dev && dev->xfrmdev_ops) {
+		dev->xfrmdev_ops->xdo_dev_state_free(x);
+		xso->dev = NULL;
+		dev_put(dev);
+	}
+}
+#else
+static inline struct sk_buff *validate_xmit_xfrm(struct sk_buff *skb, netdev_features_t features)
+{
+	return skb;
+}
+
+static inline int xfrm_dev_state_add(struct net *net, struct xfrm_state *x, struct xfrm_user_offload *xuo)
+{
+	return 0;
+}
+
+static inline void xfrm_dev_state_delete(struct xfrm_state *x)
+{
+}
+
+static inline void xfrm_dev_state_free(struct xfrm_state *x)
+{
+}
+
+static inline bool xfrm_dev_offload_ok(struct sk_buff *skb, struct xfrm_state *x)
+{
+	return false;
+}
+
+static inline bool xfrm_dst_offload_ok(struct dst_entry *dst)
+{
+	return false;
+}
+>>>>>>> b14deee7b767 (xfrm: Separate ESP handling from segmentation for GRO packets.)
 #endif
 
 static inline int xfrm_mark_get(struct nlattr **attrs, struct xfrm_mark *m)

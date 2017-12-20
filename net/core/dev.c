@@ -3110,6 +3110,8 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device 
 		}
 	}
 
+	skb = validate_xmit_xfrm(skb, features);
+
 	return skb;
 
 out_kfree_skb:

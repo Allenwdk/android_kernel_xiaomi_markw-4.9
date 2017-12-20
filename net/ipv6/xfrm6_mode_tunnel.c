@@ -96,6 +96,29 @@ out:
 	return err;
 }
 
+<<<<<<< HEAD
+=======
+static struct sk_buff *xfrm6_mode_tunnel_gso_segment(struct xfrm_state *x,
+						     struct sk_buff *skb,
+						     netdev_features_t features)
+{
+	__skb_push(skb, skb->mac_len);
+	return skb_mac_gso_segment(skb, features);
+
+}
+
+static void xfrm6_mode_tunnel_xmit(struct xfrm_state *x, struct sk_buff *skb)
+{
+	struct xfrm_offload *xo = xfrm_offload(skb);
+
+	if (xo->flags & XFRM_GSO_SEGMENT)
+		skb->transport_header = skb->network_header + sizeof(struct ipv6hdr);
+
+	skb_reset_mac_len(skb);
+	pskb_pull(skb, skb->mac_len + x->props.header_len);
+}
+
+>>>>>>> b14deee7b767 (xfrm: Separate ESP handling from segmentation for GRO packets.)
 static struct xfrm_mode xfrm6_tunnel_mode = {
 	.input2 = xfrm6_mode_tunnel_input,
 	.input = xfrm_prepare_input,

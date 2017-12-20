@@ -2897,7 +2897,9 @@ struct softnet_data {
 	struct Qdisc		*output_queue;
 	struct Qdisc		**output_queue_tailp;
 	struct sk_buff		*completion_queue;
-
+#ifdef CONFIG_XFRM_OFFLOAD
+	struct sk_buff_head	xfrm_backlog;
+#endif
 #ifdef CONFIG_RPS
 	/* input_queue_head should be written by cpu owning this struct,
 	 * and only read by other cpus. Worth using a cache line.
@@ -3413,8 +3415,12 @@ int dev_get_phys_port_id(struct net_device *dev,
 int dev_get_phys_port_name(struct net_device *dev,
 			   char *name, size_t len);
 int dev_change_proto_down(struct net_device *dev, bool proto_down);
+<<<<<<< HEAD
 int dev_change_xdp_fd(struct net_device *dev, int fd);
 struct sk_buff *validate_xmit_skb_list(struct sk_buff *skb, struct net_device *dev);
+=======
+struct sk_buff *validate_xmit_skb_list(struct sk_buff *skb, struct net_device *dev, bool *again);
+>>>>>>> ae25507f33f8 (net: Add asynchronous callbacks for xfrm on layer 2.)
 struct sk_buff *dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
 				    struct netdev_queue *txq, int *ret);
 struct sk_buff *dev_hard_start_xmit_list(struct sk_buff *skb,

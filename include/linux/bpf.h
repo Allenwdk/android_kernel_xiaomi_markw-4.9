@@ -13,6 +13,7 @@
 #include <linux/percpu.h>
 #include <linux/err.h>
 
+struct bpf_verifier_env;
 struct perf_event;
 struct bpf_map;
 struct sock;
@@ -203,10 +204,25 @@ struct bpf_verifier_ops {
 >>>>>>> ca0f8741b0fc (BACKPORT: bpf: split verifier and program ops)
 };
 
+<<<<<<< HEAD
 struct bpf_prog_type_list {
 	struct list_head list_node;
 	const struct bpf_verifier_ops *ops;
 	enum bpf_prog_type type;
+=======
+struct bpf_prog_offload_ops {
+	int (*insn_hook)(struct bpf_verifier_env *env,
+			 int insn_idx, int prev_insn_idx);
+};
+
+struct bpf_dev_offload {
+	struct bpf_prog		*prog;
+	struct net_device	*netdev;
+	void			*dev_priv;
+	struct list_head	offloads;
+	bool			dev_state;
+	const struct bpf_prog_offload_ops *dev_ops;
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 };
 
 enum bpf_cgroup_storage_type {

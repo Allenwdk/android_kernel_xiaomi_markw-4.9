@@ -3219,6 +3219,7 @@ static int is_state_visited(struct bpf_verifier_env *env, int insn_idx)
 	return 0;
 }
 
+<<<<<<< HEAD
 static int ext_analyzer_insn_hook(struct bpf_verifier_env *env,
 				  int insn_idx, int prev_insn_idx)
 {
@@ -3228,6 +3229,8 @@ static int ext_analyzer_insn_hook(struct bpf_verifier_env *env,
 	return env->analyzer_ops->insn_hook(env, insn_idx, prev_insn_idx);
 }
 
+=======
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 /* Return true if it's OK to have the same insn return a different type. */
 static bool reg_type_mismatch_ok(enum bpf_reg_type type)
 {
@@ -3323,9 +3326,18 @@ static int do_check(struct bpf_verifier_env *env)
 			print_bpf_insn(env, insn);
 		}
 
+<<<<<<< HEAD
 		err = ext_analyzer_insn_hook(env, insn_idx, prev_insn_idx);
 		if (err)
 			return err;
+=======
+		if (bpf_prog_is_dev_bound(env->prog->aux)) {
+			err = bpf_prog_offload_verify_insn(env, env->insn_idx,
+							   env->prev_insn_idx);
+			if (err)
+				return err;
+		}
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 
 		env->insn_aux_data[insn_idx].seen = true;
 		if (class == BPF_ALU || class == BPF_ALU64) {
@@ -4112,8 +4124,22 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
 			goto err_unlock;
 
 		ret = -ENOMEM;
+<<<<<<< HEAD
 		log_buf = vmalloc(log_size);
 		if (!log_buf)
+=======
+	} else {
+		log->level = 0;
+	}
+
+	env->strict_alignment = !!(attr->prog_flags & BPF_F_STRICT_ALIGNMENT);
+	if (!IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS))
+		env->strict_alignment = true;
+
+	if (bpf_prog_is_dev_bound(env->prog->aux)) {
+		ret = bpf_prog_offload_verifier_prep(env);
+		if (ret)
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 			goto err_unlock;
 	} else {
 		log_level = 0;

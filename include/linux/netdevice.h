@@ -823,13 +823,37 @@ enum xdp_netdev_command {
 	XDP_QUERY_PROG,
 };
 
+<<<<<<< HEAD
 struct netdev_xdp {
 	enum xdp_netdev_command command;
+=======
+struct bpf_prog_offload_ops;
+struct netlink_ext_ack;
+
+struct netdev_bpf {
+	enum bpf_netdev_command command;
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 	union {
 		/* XDP_SETUP_PROG */
 		struct bpf_prog *prog;
 		/* XDP_QUERY_PROG */
+<<<<<<< HEAD
 		bool prog_attached;
+=======
+		struct {
+			u8 prog_attached;
+			u32 prog_id;
+		};
+		/* BPF_OFFLOAD_VERIFIER_PREP */
+		struct {
+			struct bpf_prog *prog;
+			const struct bpf_prog_offload_ops *ops; /* callee set */
+		} verifier;
+		/* BPF_OFFLOAD_TRANSLATE, BPF_OFFLOAD_DESTROY */
+		struct {
+			struct bpf_prog *prog;
+		} offload;
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 	};
 };
 

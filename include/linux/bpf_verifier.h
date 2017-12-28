@@ -89,12 +89,41 @@ struct bpf_insn_aux_data {
 
 #define MAX_USED_MAPS 64 /* max number of maps accessed by one eBPF program */
 
+<<<<<<< HEAD
 struct bpf_verifier_env;
 struct bpf_ext_analyzer_ops {
 	int (*insn_hook)(struct bpf_verifier_env *env,
 			 int insn_idx, int prev_insn_idx);
 };
 
+=======
+#define BPF_VERIFIER_TMP_LOG_SIZE	1024
+
+struct bpf_verifier_log {
+	u32 level;
+	char kbuf[BPF_VERIFIER_TMP_LOG_SIZE];
+	char __user *ubuf;
+	u32 len_used;
+	u32 len_total;
+};
+
+static inline bool bpf_verifier_log_full(const struct bpf_verifier_log *log)
+{
+	return log->len_used >= log->len_total - 1;
+}
+
+static inline bool bpf_verifier_log_needed(const struct bpf_verifier_log *log)
+{
+	return log->level && log->ubuf && !bpf_verifier_log_full(log);
+}
+
+__printf(2, 3) void bpf_verifier_log_write(struct bpf_verifier_log *log,
+					   const char *fmt, ...);
+
+void bpf_verifier_vlog(struct bpf_verifier_log *log, const char *fmt,
+		       va_list args);
+
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 /* single container for all structs
  * one verifier_env per bpf_check() call
  */
@@ -116,6 +145,18 @@ struct bpf_verifier_env {
 	struct bpf_insn_aux_data *insn_aux_data; /* array of per-insn state */
 };
 
+<<<<<<< HEAD
+=======
+static inline struct bpf_reg_state *cur_regs(struct bpf_verifier_env *env)
+{
+	return env->cur_state->regs;
+}
+
+int bpf_prog_offload_verifier_prep(struct bpf_verifier_env *env);
+int bpf_prog_offload_verify_insn(struct bpf_verifier_env *env,
+				 int insn_idx, int prev_insn_idx);
+
+>>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
 int bpf_analyzer(struct bpf_prog *prog, const struct bpf_ext_analyzer_ops *ops,
 		 void *priv);
 

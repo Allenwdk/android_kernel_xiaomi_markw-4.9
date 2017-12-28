@@ -503,6 +503,51 @@ static inline bool unprivileged_ebpf_enabled(void)
 
 #endif /* CONFIG_BPF_SYSCALL */
 
+<<<<<<< HEAD
+=======
+int bpf_prog_offload_compile(struct bpf_prog *prog);
+void bpf_prog_offload_destroy(struct bpf_prog *prog);
+int bpf_prog_offload_info_fill(struct bpf_prog_info *info,
+			       struct bpf_prog *prog);
+
+#if defined(CONFIG_NET) && defined(CONFIG_BPF_SYSCALL)
+int bpf_prog_offload_init(struct bpf_prog *prog, union bpf_attr *attr);
+
+static inline bool bpf_prog_is_dev_bound(struct bpf_prog_aux *aux)
+{
+	return aux->offload;
+}
+#else
+static inline int bpf_prog_offload_init(struct bpf_prog *prog,
+					union bpf_attr *attr)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline bool bpf_prog_is_dev_bound(struct bpf_prog_aux *aux)
+{
+	return false;
+}
+#endif /* CONFIG_NET && CONFIG_BPF_SYSCALL */
+
+#if defined(CONFIG_STREAM_PARSER) && defined(CONFIG_BPF_SYSCALL)
+struct sock  *__sock_map_lookup_elem(struct bpf_map *map, u32 key);
+int sock_map_prog(struct bpf_map *map, struct bpf_prog *prog, u32 type);
+#else
+static inline struct sock  *__sock_map_lookup_elem(struct bpf_map *map, u32 key)
+{
+	return NULL;
+}
+
+static inline int sock_map_prog(struct bpf_map *map,
+				struct bpf_prog *prog,
+				u32 type)
+{
+	return -EOPNOTSUPP;
+}
+#endif
+
+>>>>>>> 5ef6fdb74405 (bpf: offload: report device information for offloaded programs)
 /* verifier prototypes for helper functions called from eBPF programs */
 extern const struct bpf_func_proto bpf_map_lookup_elem_proto;
 extern const struct bpf_func_proto bpf_map_update_elem_proto;

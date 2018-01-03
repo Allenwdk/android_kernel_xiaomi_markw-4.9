@@ -21,6 +21,7 @@
 #include <linux/kallsyms.h>
 >>>>>>> 704ef94f2fb9 (bpf: allow for correlation of maps and helpers in dump)
 
+#include <net/xdp.h>
 #include <net/sch_generic.h>
 
 #include <asm/cacheflush.h>
@@ -515,7 +516,11 @@ struct xdp_buff {
 =======
 	void *data_meta;
 	void *data_hard_start;
+<<<<<<< HEAD
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
+=======
+	struct xdp_rxq_info *rxq;
+>>>>>>> 0d77ebbcf10f (xdp: base API for new XDP rx-queue info concept)
 };
 
 struct sk_msg_buff {

@@ -821,6 +821,15 @@ enum xdp_netdev_command {
 	 * return true if a program is currently attached and running.
 	 */
 	XDP_QUERY_PROG,
+<<<<<<< HEAD
+=======
+	/* BPF program for offload callbacks, invoked at program load time. */
+	BPF_OFFLOAD_VERIFIER_PREP,
+	BPF_OFFLOAD_TRANSLATE,
+	BPF_OFFLOAD_DESTROY,
+	BPF_OFFLOAD_MAP_ALLOC,
+	BPF_OFFLOAD_MAP_FREE,
+>>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
 };
 
 <<<<<<< HEAD
@@ -853,7 +862,14 @@ struct netdev_bpf {
 		struct {
 			struct bpf_prog *prog;
 		} offload;
+<<<<<<< HEAD
 >>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
+=======
+		/* BPF_OFFLOAD_MAP_ALLOC, BPF_OFFLOAD_MAP_FREE */
+		struct {
+			struct bpf_offloaded_map *offmap;
+		};
+>>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
 	};
 };
 

@@ -153,7 +153,17 @@ static int alloc_extra_elems(struct bpf_htab *htab)
 /* Called from syscall */
 static struct bpf_map *htab_map_alloc(union bpf_attr *attr)
 {
-	bool percpu = attr->map_type == BPF_MAP_TYPE_PERCPU_HASH;
+	bool percpu = (attr->map_type == BPF_MAP_TYPE_PERCPU_HASH ||
+		       attr->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH);
+	bool lru = (attr->map_type == BPF_MAP_TYPE_LRU_HASH ||
+		    attr->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH);
+	/* percpu_lru means each cpu has its own LRU list.
+	 * it is different from BPF_MAP_TYPE_PERCPU_HASH where
+	 * the map's value itself is percpu.  percpu_lru has
+	 * nothing to do with the map's value.
+	 */
+	bool percpu_lru = (attr->map_flags & BPF_F_NO_COMMON_LRU);
+	bool prealloc = !(attr->map_flags & BPF_F_NO_PREALLOC);
 	struct bpf_htab *htab;
 	int err, i;
 	u64 cost;
@@ -167,16 +177,17 @@ static struct bpf_map *htab_map_alloc(union bpf_attr *attr)
 		/* reserved bits should not be used */
 		return ERR_PTR(-EINVAL);
 
+	if (!lru && percpu_lru)
+		return ERR_PTR(-EINVAL);
+
+	if (lru && !prealloc)
+		return ERR_PTR(-ENOTSUPP);
+
 	htab = kzalloc(sizeof(*htab), GFP_USER);
 	if (!htab)
 		return ERR_PTR(-ENOMEM);
 
-	/* mandatory map attributes */
-	htab->map.map_type = attr->map_type;
-	htab->map.key_size = attr->key_size;
-	htab->map.value_size = attr->value_size;
-	htab->map.max_entries = attr->max_entries;
-	htab->map.map_flags = attr->map_flags;
+	bpf_map_init_from_attr(&htab->map, attr);
 
 	/* check sanity of attributes.
 	 * value_size == 0 may be allowed in the future to use map as a set

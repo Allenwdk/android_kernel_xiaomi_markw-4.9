@@ -215,7 +215,7 @@ struct bpf_prog_offload_ops {
 			 int insn_idx, int prev_insn_idx);
 };
 
-struct bpf_dev_offload {
+struct bpf_prog_offload {
 	struct bpf_prog		*prog;
 	struct net_device	*netdev;
 	void			*dev_priv;
@@ -254,8 +254,12 @@ struct bpf_prog_aux {
 	u64 load_time; /* ns since boottime */
 	struct bpf_map *cgroup_storage[MAX_BPF_CGROUP_STORAGE_TYPE];
 	char name[BPF_OBJ_NAME_LEN];
+<<<<<<< HEAD
 	struct bpf_dev_offload *offload;
 >>>>>>> a237531e1bc5 (bpf: introduce cgroup storage maps)
+=======
+	struct bpf_prog_offload *offload;
+>>>>>>> 5a58701d2652 (bpf: rename bpf_dev_offload -> bpf_prog_offload)
 	union {
 		struct work_struct work;
 		struct rcu_head	rcu;

@@ -489,6 +489,29 @@ static u32 user2credits_byte(u32 user)
 	return (u32) (us >> 32);
 }
 
+<<<<<<< HEAD
+=======
+static u64 user2rate(u64 user)
+{
+	if (user != 0) {
+		return div64_u64(XT_HASHLIMIT_SCALE_v2, user);
+	} else {
+		pr_info_ratelimited("invalid rate from userspace: %llu\n",
+				    user);
+		return 0;
+	}
+}
+
+static u64 user2rate_bytes(u32 user)
+{
+	u64 r;
+
+	r = user ? U32_MAX / user : U32_MAX;
+	r = (r - 1) << XT_HASHLIMIT_BYTE_SHIFT;
+	return r;
+}
+
+>>>>>>> 631565f5cdef (netfilter: x_tables: use pr ratelimiting in all remaining spots)
 static void rateinfo_recalc(struct dsthash_ent *dh, unsigned long now,
 			    u32 mode, int revision)
 {
@@ -764,23 +787,38 @@ static int hashlimit_mt_check_common(const struct xt_mtchk_param *par,
 	}
 
 	if (cfg->mode & ~XT_HASHLIMIT_ALL) {
-		pr_info("Unknown mode mask %X, kernel too old?\n",
-						cfg->mode);
+		pr_info_ratelimited("Unknown mode mask %X, kernel too old?\n",
+				    cfg->mode);
 		return -EINVAL;
 	}
 
 	/* Check for overflow. */
+<<<<<<< HEAD
 	if (cfg->mode & XT_HASHLIMIT_BYTES) {
+=======
+	if (revision >= 3 && cfg->mode & XT_HASHLIMIT_RATE_MATCH) {
+		if (cfg->avg == 0 || cfg->avg > U32_MAX) {
+			pr_info_ratelimited("invalid rate\n");
+			return -ERANGE;
+		}
+
+		if (cfg->interval == 0) {
+			pr_info_ratelimited("invalid interval\n");
+			return -EINVAL;
+		}
+	} else if (cfg->mode & XT_HASHLIMIT_BYTES) {
+>>>>>>> 631565f5cdef (netfilter: x_tables: use pr ratelimiting in all remaining spots)
 		if (user2credits_byte(cfg->avg) == 0) {
-			pr_info("overflow, rate too high: %llu\n", cfg->avg);
+			pr_info_ratelimited("overflow, rate too high: %llu\n",
+					    cfg->avg);
 			return -EINVAL;
 		}
 	} else if (cfg->burst == 0 ||
-		    user2credits(cfg->avg * cfg->burst, revision) <
-		    user2credits(cfg->avg, revision)) {
-			pr_info("overflow, try lower: %llu/%llu\n",
-				cfg->avg, cfg->burst);
-			return -ERANGE;
+		   user2credits(cfg->avg * cfg->burst, revision) <
+		   user2credits(cfg->avg, revision)) {
+		pr_info_ratelimited("overflow, try lower: %llu/%llu\n",
+				    cfg->avg, cfg->burst);
+		return -ERANGE;
 	}
 
 	mutex_lock(&hashlimit_mutex);

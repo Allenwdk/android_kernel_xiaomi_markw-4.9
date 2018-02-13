@@ -21,7 +21,6 @@
 #include <linux/kallsyms.h>
 >>>>>>> 704ef94f2fb9 (bpf: allow for correlation of maps and helpers in dump)
 
-#include <net/xdp.h>
 #include <net/sch_generic.h>
 
 #include <asm/cacheflush.h>
@@ -33,6 +32,7 @@ struct sk_buff;
 struct sock;
 struct seccomp_data;
 struct bpf_prog_aux;
+struct xdp_rxq_info;
 struct ctl_table;
 struct ctl_table_header;
 

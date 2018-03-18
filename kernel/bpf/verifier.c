@@ -679,6 +679,7 @@ static bool may_access_direct_pkt_data(struct bpf_verifier_env *env,
 =======
 	case BPF_PROG_TYPE_LWT_XMIT:
 	case BPF_PROG_TYPE_SK_SKB:
+	case BPF_PROG_TYPE_SK_MSG:
 	case BPF_PROG_TYPE_FLOW_DISSECTOR:
 >>>>>>> 3bac91948b0f (BACKPORT: flow_dissector: implements flow dissector BPF hook)
 		if (meta)
@@ -1259,6 +1260,27 @@ static int check_map_func_compatibility(struct bpf_map *map, int func_id)
 		    func_id != BPF_FUNC_current_task_under_cgroup)
 			goto error;
 		break;
+<<<<<<< HEAD
+=======
+	case BPF_MAP_TYPE_DEVMAP:
+	case BPF_MAP_TYPE_DEVMAP_HASH:
+		if (func_id != BPF_FUNC_redirect_map &&
+		    func_id != BPF_FUNC_map_lookup_elem)
+			goto error;
+		break;
+	case BPF_MAP_TYPE_ARRAY_OF_MAPS:
+	case BPF_MAP_TYPE_HASH_OF_MAPS:
+		if (func_id != BPF_FUNC_map_lookup_elem)
+			goto error;
+		break;
+	case BPF_MAP_TYPE_SOCKMAP:
+		if (func_id != BPF_FUNC_sk_redirect_map &&
+		    func_id != BPF_FUNC_sock_map_update &&
+		    func_id != BPF_FUNC_map_delete_elem &&
+		    func_id != BPF_FUNC_msg_redirect_map)
+			goto error;
+		break;
+>>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
 	default:
 		break;
 	}
@@ -1283,6 +1305,23 @@ static int check_map_func_compatibility(struct bpf_map *map, int func_id)
 		if (map->map_type != BPF_MAP_TYPE_CGROUP_ARRAY)
 			goto error;
 		break;
+<<<<<<< HEAD
+=======
+	case BPF_FUNC_redirect_map:
+		if (map->map_type != BPF_MAP_TYPE_DEVMAP &&
+		    map->map_type != BPF_MAP_TYPE_DEVMAP_HASH)
+			goto error;
+		break;
+	case BPF_FUNC_sk_redirect_map:
+	case BPF_FUNC_msg_redirect_map:
+		if (map->map_type != BPF_MAP_TYPE_SOCKMAP)
+			goto error;
+		break;
+	case BPF_FUNC_sock_map_update:
+		if (map->map_type != BPF_MAP_TYPE_SOCKMAP)
+			goto error;
+		break;
+>>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
 	default:
 		break;
 	}

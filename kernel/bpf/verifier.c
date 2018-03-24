@@ -227,6 +227,7 @@ static char *log_buf;
 static DEFINE_MUTEX(bpf_verifier_lock);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 /* log_level controls verbosity level of eBPF verifier.
  * verbose() is used to dump the verification trace to the log, so the user
  * can figure out what's wrong with the program
@@ -236,27 +237,11 @@ static __printf(2, 3) void verbose(struct bpf_verifier_env *env,
 =======
 void bpf_verifier_vlog(struct bpf_verifier_log *log,
 		       const char *fmt, va_list args)
+=======
+void bpf_verifier_vlog(struct bpf_verifier_log *log, const char *fmt,
+		       va_list args)
+>>>>>>> 94af7db7607d (bpf: Add bpf_verifier_vlog() and bpf_verifier_log_needed())
 {
-	unsigned int n;
-
-	n = vscnprintf(log->kbuf, BPF_VERIFIER_TMP_LOG_SIZE, fmt, args);
-
-	WARN_ONCE(n >= BPF_VERIFIER_TMP_LOG_SIZE - 1,
-		  "verifier log line truncated - local buffer too short\n");
-
-	n = min(log->len_total - log->len_used - 1, n);
-	log->kbuf[n] = '\0';
-
-	if (!copy_to_user(log->ubuf + log->len_used, log->kbuf, n + 1))
-		log->len_used += n;
-	else
-		log->ubuf = NULL;
-}
-
-static void log_write(struct bpf_verifier_env *env, const char *fmt,
-		      va_list args)
-{
-	struct bpf_verifier_log *log = &env->log;
 	unsigned int n;
 
 	n = vscnprintf(log->kbuf, BPF_VERIFIER_TMP_LOG_SIZE, fmt, args);
@@ -280,8 +265,12 @@ __printf(2, 3) void bpf_verifier_log_write(struct bpf_verifier_env *env,
 					   const char *fmt, ...)
 {
 	va_list args;
+
+	if (!bpf_verifier_log_needed(&env->log))
+		return;
+
 	va_start(args, fmt);
-	log_write(env, fmt, args);
+	bpf_verifier_vlog(&env->log, fmt, args);
 	va_end(args);
 }
 EXPORT_SYMBOL_GPL(bpf_verifier_log_write);
@@ -289,7 +278,9 @@ EXPORT_SYMBOL_GPL(bpf_verifier_log_write);
 __printf(2, 3) static void verbose(void *private_data, const char *fmt, ...)
 >>>>>>> a06b02156a19 (bpf: Remove struct bpf_verifier_env argument from print_bpf_insn)
 {
+	struct bpf_verifier_env *env = private_data;
 	va_list args;
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 <<<<<<< HEAD
@@ -310,6 +301,14 @@ __printf(2, 3) static void verbose(void *private_data, const char *fmt, ...)
 	va_start(args, fmt);
 	log_write(private_data, fmt, args);
 >>>>>>> a06b02156a19 (bpf: Remove struct bpf_verifier_env argument from print_bpf_insn)
+=======
+
+	if (!bpf_verifier_log_needed(&env->log))
+		return;
+
+	va_start(args, fmt);
+	bpf_verifier_vlog(&env->log, fmt, args);
+>>>>>>> 94af7db7607d (bpf: Add bpf_verifier_vlog() and bpf_verifier_log_needed())
 	va_end(args);
 }
 

@@ -33,6 +33,7 @@ struct sock;
 struct seccomp_data;
 struct bpf_prog_aux;
 struct xdp_rxq_info;
+struct xdp_buff;
 struct ctl_table;
 struct ctl_table_header;
 
@@ -509,6 +510,7 @@ struct bpf_skb_data_end {
 	void *data_end;
 };
 
+<<<<<<< HEAD
 struct xdp_buff {
 	void *data;
 	void *data_end;
@@ -523,6 +525,8 @@ struct xdp_buff {
 >>>>>>> 0d77ebbcf10f (xdp: base API for new XDP rx-queue info concept)
 };
 
+=======
+>>>>>>> 92d0828ed41a (xdp: move struct xdp_buff from filter.h to xdp.h)
 struct sk_msg_buff {
 	void *data;
 	void *data_end;
@@ -796,21 +800,6 @@ int xdp_do_redirect(struct net_device *dev,
 		    struct xdp_buff *xdp,
 		    struct bpf_prog *prog);
 void xdp_do_flush_map(void);
-
-/* Drivers not supporting XDP metadata can use this helper, which
- * rejects any room expansion for metadata as a result.
- */
-static __always_inline void
-xdp_set_data_meta_invalid(struct xdp_buff *xdp)
-{
-	xdp->data_meta = xdp->data + 1;
-}
-
-static __always_inline bool
-xdp_data_meta_unsupported(const struct xdp_buff *xdp)
-{
-	return unlikely(xdp->data_meta > xdp->data);
-}
 
 void bpf_warn_invalid_xdp_action(u32 act);
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)

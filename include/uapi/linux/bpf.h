@@ -256,7 +256,13 @@ union bpf_attr {
 					 */
 		char	map_name[BPF_OBJ_NAME_LEN];
 		__u32	map_ifindex;	/* ifindex of netdev to create on */
+<<<<<<< HEAD
 >>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
+=======
+		__u32	btf_fd;		/* fd pointing to a BTF type data */
+		__u32	btf_key_id;	/* BTF type_id of the key */
+		__u32	btf_value_id;	/* BTF type_id of the value */
+>>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
 	};
 
 	struct { /* anonymous struct used by BPF_MAP_*_ELEM commands */

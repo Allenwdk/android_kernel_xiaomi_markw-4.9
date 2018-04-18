@@ -19,6 +19,22 @@
 #include <linux/license.h>
 #include <linux/filter.h>
 #include <linux/version.h>
+<<<<<<< HEAD
+=======
+#include <linux/kernel.h>
+#include <linux/idr.h>
+#include <linux/cred.h>
+#include <linux/timekeeping.h>
+#include <linux/ctype.h>
+#include <linux/btf.h>
+
+#define IS_FD_ARRAY(map) ((map)->map_type == BPF_MAP_TYPE_PROG_ARRAY || \
+			   (map)->map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY || \
+			   (map)->map_type == BPF_MAP_TYPE_CGROUP_ARRAY || \
+			   (map)->map_type == BPF_MAP_TYPE_ARRAY_OF_MAPS)
+#define IS_FD_HASH(map) ((map)->map_type == BPF_MAP_TYPE_HASH_OF_MAPS)
+#define IS_FD_MAP(map) (IS_FD_ARRAY(map) || IS_FD_HASH(map))
+>>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
 
 #define BPF_OBJ_FLAG_MASK   (BPF_F_RDONLY | BPF_F_WRONLY)
 
@@ -235,6 +251,7 @@ static void bpf_map_free_deferred(struct work_struct *work)
 
 	bpf_map_release_memlock(map);
 	security_bpf_map_free(map);
+	btf_put(map->btf);
 	/* implementation dependent freeing */
 	map->ops->map_free(map);
 }
@@ -378,8 +395,12 @@ static int bpf_obj_name_cpy(char *dst, const char *src)
 	return 0;
 }
 
+<<<<<<< HEAD
 #define BPF_MAP_CREATE_LAST_FIELD map_ifindex
 >>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
+=======
+#define BPF_MAP_CREATE_LAST_FIELD btf_value_id
+>>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
 /* called via syscall */
 static int map_create(union bpf_attr *attr)
 {
@@ -403,6 +424,29 @@ static int map_create(union bpf_attr *attr)
 	atomic_set(&map->refcnt, 1);
 	atomic_set(&map->usercnt, 1);
 
+	if (bpf_map_support_seq_show(map) &&
+	    (attr->btf_key_id || attr->btf_value_id)) {
+		struct btf *btf;
+		if (!attr->btf_key_id || !attr->btf_value_id) {
+			err = -EINVAL;
+			goto free_map_nouncharge;
+		}
+		btf = btf_get_by_fd(attr->btf_fd);
+		if (IS_ERR(btf)) {
+			err = PTR_ERR(btf);
+			goto free_map_nouncharge;
+		}
+		err = map->ops->map_check_btf(map, btf, attr->btf_key_id,
+					      attr->btf_value_id);
+		if (err) {
+			btf_put(btf);
+			goto free_map_nouncharge;
+		}
+		map->btf = btf;
+		map->btf_key_id = attr->btf_key_id;
+		map->btf_value_id = attr->btf_value_id;
+	}
+
 	err = security_bpf_map_alloc(map);
 	if (err)
 		goto free_map_nouncharge;
@@ -423,6 +467,7 @@ free_map:
 free_map_sec:
 	security_bpf_map_free(map);
 free_map_nouncharge:
+	btf_put(map->btf);
 	map->ops->map_free(map);
 	return err;
 }

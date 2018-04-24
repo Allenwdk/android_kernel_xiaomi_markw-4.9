@@ -2923,7 +2923,7 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 	if (arg_type == ARG_PTR_TO_MAP_KEY ||
 	    arg_type == ARG_PTR_TO_MAP_VALUE) {
 		expected_type = PTR_TO_STACK;
-		if (!type_is_pkt_pointer(type) &&
+		if (!type_is_pkt_pointer(type) && type != PTR_TO_MAP_VALUE &&
 		    type != expected_type)
 			goto err_type;
 	} else if (arg_type == ARG_CONST_STACK_SIZE ||
@@ -3034,6 +3034,7 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 			return -EACCES;
 		}
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if (type == PTR_TO_PACKET)
 			err = check_packet_access(env, regno, 0,
 =======
@@ -3045,6 +3046,11 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 			err = check_stack_boundary(env, regno,
 						   meta->map_ptr->key_size,
 						   false, NULL);
+=======
+		err = check_helper_mem_access(env, regno,
+					      meta->map_ptr->key_size, false,
+					      NULL);
+>>>>>>> e992e0604dc8 (bpf: allow map helpers access to map values directly)
 	} else if (arg_type == ARG_PTR_TO_MAP_VALUE) {
 		/* bpf_map_xxx(..., map_ptr, ..., value) call:
 		 * check [value, value + map->value_size) validity
@@ -3054,6 +3060,7 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 			verbose(env, "invalid map_ptr to access map->value\n");
 			return -EACCES;
 		}
+<<<<<<< HEAD
 <<<<<<< HEAD
 		if (type == PTR_TO_PACKET)
 			err = check_packet_access(env, regno, 0,
@@ -3071,6 +3078,11 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		   arg_type == ARG_CONST_STACK_SIZE_OR_ZERO) {
 		bool zero_size_allowed = (arg_type == ARG_CONST_STACK_SIZE_OR_ZERO);
 =======
+=======
+		err = check_helper_mem_access(env, regno,
+					      meta->map_ptr->value_size, false,
+					      NULL);
+>>>>>>> e992e0604dc8 (bpf: allow map helpers access to map values directly)
 	} else if (arg_type_is_mem_size(arg_type)) {
 		bool zero_size_allowed = (arg_type == ARG_CONST_SIZE_OR_ZERO);
 >>>>>>> 27dcbb371004 (bpf, verifier: detect misconfigured mem, size argument pair)

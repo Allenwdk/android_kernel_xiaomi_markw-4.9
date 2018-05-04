@@ -105,7 +105,11 @@ enum bpf_cmd {
 	BPF_PROG_QUERY,
 	BPF_RAW_TRACEPOINT_OPEN,
 	BPF_BTF_LOAD = 18,
+<<<<<<< HEAD
 >>>>>>> bc9ebbfad5f6 (BACKPORT: bpf: introduce BPF_RAW_TRACEPOINT)
+=======
+	BPF_BTF_GET_FD_BY_ID = 19,
+>>>>>>> 4e77fc2aac7f (bpf: btf: Introduce BTF ID)
 };
 
 enum bpf_map_type {
@@ -317,6 +321,7 @@ union bpf_attr {
 			__u32		start_id;
 			__u32		prog_id;
 			__u32		map_id;
+			__u32		btf_id;
 		};
 		__u32		next_id;
 		__u32		open_flags;
@@ -1391,6 +1396,9 @@ struct bpf_map_info {
 	__u32 ifindex;
 	__u64 netns_dev;
 	__u64 netns_ino;
+	__u32 btf_id;
+	__u32 btf_key_id;
+	__u32 btf_value_id;
 } __attribute__((aligned(8)));
 
 /* User bpf_sock_addr struct to access socket fields and sockaddr struct passed

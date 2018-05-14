@@ -809,6 +809,14 @@ struct tcp_skb_cb {
 			struct inet6_skb_parm	h6;
 #endif
 		} header;	/* For incoming skbs */
+<<<<<<< HEAD
+=======
+		struct {
+			__u32 flags;
+			struct sock *sk_redir;
+			void *data_end;
+		} bpf;
+>>>>>>> b16045191749 (bpf: sockmap, refactor sockmap routines to work with hashmap)
 	};
 };
 

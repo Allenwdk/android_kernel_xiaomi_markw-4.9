@@ -783,9 +783,16 @@ static inline void bpf_map_offload_map_free(struct bpf_map *map)
 
 #if defined(CONFIG_STREAM_PARSER) && defined(CONFIG_BPF_SYSCALL)
 struct sock  *__sock_map_lookup_elem(struct bpf_map *map, u32 key);
+struct sock  *__sock_hash_lookup_elem(struct bpf_map *map, void *key);
 int sock_map_prog(struct bpf_map *map, struct bpf_prog *prog, u32 type);
 #else
 static inline struct sock  *__sock_map_lookup_elem(struct bpf_map *map, u32 key)
+{
+	return NULL;
+}
+
+static inline struct sock  *__sock_hash_lookup_elem(struct bpf_map *map,
+						    void *key)
 {
 	return NULL;
 }
@@ -818,6 +825,7 @@ extern const struct bpf_func_proto bpf_get_stackid_proto;
 
 =======
 extern const struct bpf_func_proto bpf_sock_map_update_proto;
+extern const struct bpf_func_proto bpf_sock_hash_update_proto;
 extern const struct bpf_func_proto bpf_get_current_cgroup_id_proto;
 <<<<<<< HEAD
 >>>>>>> d4da82b72112 (bpf: implement bpf_get_current_cgroup_id() helper)

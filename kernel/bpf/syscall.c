@@ -43,7 +43,59 @@ DEFINE_PER_CPU(int, bpf_prog_active);
 int sysctl_unprivileged_bpf_disabled __read_mostly =
 	IS_BUILTIN(CONFIG_BPF_UNPRIV_DEFAULT_OFF) ? 2 : 0;
 
+<<<<<<< HEAD
 static LIST_HEAD(bpf_map_types);
+=======
+static const struct bpf_map_ops * const bpf_map_types[] = {
+#define BPF_PROG_TYPE(_id, _ops)
+#define BPF_MAP_TYPE(_id, _ops) \
+	[_id] = &_ops,
+#include <linux/bpf_types.h>
+#undef BPF_PROG_TYPE
+#undef BPF_MAP_TYPE
+};
+
+/*
+ * If we're handed a bigger struct than we know of, ensure all the unknown bits
+ * are 0 - i.e. new user-space does not rely on any kernel feature extensions
+ * we don't know about yet.
+ *
+ * There is a ToCToU between this function call and the following
+ * copy_from_user() call. However, this is not a concern since this function is
+ * meant to be a future-proofing of bits.
+ */
+int bpf_check_uarg_tail_zero(void __user *uaddr,
+			     size_t expected_size,
+			     size_t actual_size)
+{
+	unsigned char __user *addr;
+	unsigned char __user *end;
+	unsigned char val;
+	int err;
+
+	if (unlikely(actual_size > PAGE_SIZE))	/* silly large */
+		return -E2BIG;
+
+	if (unlikely(!access_ok(VERIFY_READ, uaddr, actual_size)))
+		return -EFAULT;
+
+	if (actual_size <= expected_size)
+		return 0;
+
+	addr = uaddr + expected_size;
+	end  = uaddr + actual_size;
+
+	for (; addr < end; addr++) {
+		err = get_user(val, addr);
+		if (err)
+			return err;
+		if (val)
+			return -E2BIG;
+	}
+
+	return 0;
+}
+>>>>>>> 19cd30bec89a (bpf: Expose check_uarg_tail_zero())
 
 const struct bpf_map_ops bpf_map_offload_ops = {
 	.map_alloc = bpf_map_offload_map_alloc,
@@ -1747,7 +1799,7 @@ static int bpf_prog_get_info_by_fd(struct bpf_prog *prog,
 	u32 ulen;
 	int err;
 
-	err = check_uarg_tail_zero(uinfo, sizeof(info), info_len);
+	err = bpf_check_uarg_tail_zero(uinfo, sizeof(info), info_len);
 	if (err)
 		return err;
 	info_len = min_t(u32, sizeof(info), info_len);
@@ -1887,7 +1939,7 @@ static int bpf_map_get_info_by_fd(struct bpf_map *map,
 	u32 info_len = attr->info.info_len;
 	int err;
 
-	err = check_uarg_tail_zero(uinfo, sizeof(info), info_len);
+	err = bpf_check_uarg_tail_zero(uinfo, sizeof(info), info_len);
 	if (err)
 		return err;
 	info_len = min_t(u32, sizeof(info), info_len);
@@ -1989,6 +2041,7 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	if (sysctl_unprivileged_bpf_disabled && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 
+<<<<<<< HEAD
 	if (!access_ok(VERIFY_READ, uattr, 1))
 		return -EFAULT;
 
@@ -2017,6 +2070,12 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 		}
 		size = sizeof(attr);
 	}
+=======
+	err = bpf_check_uarg_tail_zero(uattr, sizeof(attr), size);
+	if (err)
+		return err;
+	size = min_t(u32, size, sizeof(attr));
+>>>>>>> 19cd30bec89a (bpf: Expose check_uarg_tail_zero())
 
 	/* copy attributes from user space, may be less than sizeof(bpf_attr) */
 	memset(&attr, 0, sizeof(attr));

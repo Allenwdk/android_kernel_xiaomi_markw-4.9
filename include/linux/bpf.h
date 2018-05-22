@@ -75,8 +75,8 @@ struct bpf_map {
 =======
 	u32 id;
 	int numa_node;
-	u32 btf_key_id;
-	u32 btf_value_id;
+	u32 btf_key_type_id;
+	u32 btf_value_type_id;
 	struct btf *btf;
 >>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
 	bool unpriv_array;

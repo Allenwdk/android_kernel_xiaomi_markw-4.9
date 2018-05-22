@@ -487,9 +487,13 @@ static int map_check_btf(const struct bpf_map *map, const struct btf *btf,
 	return ret;
 }
 
+<<<<<<< HEAD
 >>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)
 #define BPF_MAP_CREATE_LAST_FIELD btf_value_id
 >>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
+=======
+#define BPF_MAP_CREATE_LAST_FIELD btf_value_type_id
+>>>>>>> 0258195c378c (bpf: btf: Rename btf_key_id and btf_value_id in bpf_map_info)
 /* called via syscall */
 static int map_create(union bpf_attr *attr)
 {
@@ -514,9 +518,10 @@ static int map_create(union bpf_attr *attr)
 	atomic_set(&map->usercnt, 1);
 
 	if (bpf_map_support_seq_show(map) &&
-	    (attr->btf_key_id || attr->btf_value_id)) {
+	    (attr->btf_key_type_id || attr->btf_value_type_id)) {
 		struct btf *btf;
-		if (!attr->btf_key_id || !attr->btf_value_id) {
+
+		if (!attr->btf_key_type_id || !attr->btf_value_type_id) {
 			err = -EINVAL;
 			goto free_map_nouncharge;
 		}
@@ -525,15 +530,16 @@ static int map_create(union bpf_attr *attr)
 			err = PTR_ERR(btf);
 			goto free_map_nouncharge;
 		}
-		err = map_check_btf(map, btf, attr->btf_key_id,
-					      attr->btf_value_id);
+
+		err = map_check_btf(map, btf, attr->btf_key_type_id,
+					      attr->btf_value_type_id);
 		if (err) {
 			btf_put(btf);
 			goto free_map_nouncharge;
 		}
 		map->btf = btf;
-		map->btf_key_id = attr->btf_key_id;
-		map->btf_value_id = attr->btf_value_id;
+		map->btf_key_type_id = attr->btf_key_type_id;
+		map->btf_value_type_id = attr->btf_value_type_id;
 	}
 
 	err = security_bpf_map_alloc(map);
@@ -2081,8 +2087,8 @@ static int bpf_map_get_info_by_fd(struct bpf_map *map,
 
 	if (map->btf) {
 		info.btf_id = btf_id(map->btf);
-		info.btf_key_id = map->btf_key_id;
-		info.btf_value_id = map->btf_value_id;
+		info.btf_key_type_id = map->btf_key_type_id;
+		info.btf_value_type_id = map->btf_value_type_id;
 	}
 
 	if (bpf_map_is_dev_bound(map)) {

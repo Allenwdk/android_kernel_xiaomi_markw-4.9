@@ -280,9 +280,14 @@ union bpf_attr {
 >>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
 =======
 		__u32	btf_fd;		/* fd pointing to a BTF type data */
+<<<<<<< HEAD
 		__u32	btf_key_id;	/* BTF type_id of the key */
 		__u32	btf_value_id;	/* BTF type_id of the value */
 >>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
+=======
+		__u32	btf_key_type_id;	/* BTF type_id of the key */
+		__u32	btf_value_type_id;	/* BTF type_id of the value */
+>>>>>>> 0258195c378c (bpf: btf: Rename btf_key_id and btf_value_id in bpf_map_info)
 	};
 
 	struct { /* anonymous struct used by BPF_MAP_*_ELEM commands */
@@ -1461,8 +1466,8 @@ struct bpf_map_info {
 	__u64 netns_dev;
 	__u64 netns_ino;
 	__u32 btf_id;
-	__u32 btf_key_id;
-	__u32 btf_value_id;
+	__u32 btf_key_type_id;
+	__u32 btf_value_type_id;
 } __attribute__((aligned(8)));
 
 /* User bpf_sock_addr struct to access socket fields and sockaddr struct passed

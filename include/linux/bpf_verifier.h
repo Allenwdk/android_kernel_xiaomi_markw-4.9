@@ -140,7 +140,7 @@ struct bpf_insn_aux_data {
 		struct bpf_map *map_ptr;        /* pointer for call insn into lookup_elem */
 =======
 		enum bpf_reg_type ptr_type;	/* pointer type for load/store insns */
-		struct bpf_map *map_ptr;	/* pointer for call insn into lookup_elem */
+		unsigned long map_state;	/* pointer/poison value for maps */
 		u32 alu_limit;			/* limit for add/sub register with pointer */
 		s32 call_imm;			/* saved imm field of call insn */
 >>>>>>> 87b159cb4a05 (bpf: x64: add JIT support for multi-function programs)

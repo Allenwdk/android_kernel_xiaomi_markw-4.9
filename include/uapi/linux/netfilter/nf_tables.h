@@ -799,6 +799,48 @@ enum nft_meta_attributes {
 #define NFTA_META_MAX		(__NFTA_META_MAX - 1)
 
 /**
+<<<<<<< HEAD
+=======
+ * enum nft_rt_attributes - nf_tables routing expression netlink attributes
+ *
+ * @NFTA_RT_DREG: destination register (NLA_U32)
+ * @NFTA_RT_KEY: routing data item to load (NLA_U32: nft_rt_keys)
+ */
+enum nft_rt_attributes {
+	NFTA_RT_UNSPEC,
+	NFTA_RT_DREG,
+	NFTA_RT_KEY,
+	__NFTA_RT_MAX
+};
+#define NFTA_RT_MAX		(__NFTA_RT_MAX - 1)
+
+/**
+ * enum nft_socket_attributes - nf_tables socket expression netlink attributes
+ *
+ * @NFTA_SOCKET_KEY: socket key to match
+ * @NFTA_SOCKET_DREG: destination register
+ */
+enum nft_socket_attributes {
+	NFTA_SOCKET_UNSPEC,
+	NFTA_SOCKET_KEY,
+	NFTA_SOCKET_DREG,
+	__NFTA_SOCKET_MAX
+};
+#define NFTA_SOCKET_MAX		(__NFTA_SOCKET_MAX - 1)
+
+/*
+ * enum nft_socket_keys - nf_tables socket expression keys
+ *
+ * @NFT_SOCKET_TRANSPARENT: Value of the IP(V6)_TRANSPARENT socket option_
+ */
+enum nft_socket_keys {
+	NFT_SOCKET_TRANSPARENT,
+	__NFT_SOCKET_MAX
+};
+#define NFT_SOCKET_MAX	(__NFT_SOCKET_MAX - 1)
+
+/**
+>>>>>>> 5967cc59eda5 (netfilter: nf_tables: add support for native socket matching)
  * enum nft_ct_keys - nf_tables ct expression keys
  *
  * @NFT_CT_STATE: conntrack state (bitmask of enum ip_conntrack_info)

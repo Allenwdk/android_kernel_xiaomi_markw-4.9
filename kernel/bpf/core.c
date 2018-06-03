@@ -1471,6 +1471,7 @@ const struct bpf_func_proto bpf_get_current_comm_proto __weak;
 <<<<<<< HEAD
 =======
 const struct bpf_func_proto bpf_sock_map_update_proto __weak;
+const struct bpf_func_proto bpf_get_current_cgroup_id_proto __weak;
 const struct bpf_func_proto bpf_get_local_storage_proto __weak;
 >>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
 

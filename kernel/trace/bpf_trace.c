@@ -502,6 +502,13 @@ static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
 		return &bpf_current_task_under_cgroup_proto;
 	case BPF_FUNC_get_prandom_u32:
 		return &bpf_get_prandom_u32_proto;
+<<<<<<< HEAD
+=======
+	case BPF_FUNC_probe_read_str:
+		return &bpf_probe_read_str_proto;
+	case BPF_FUNC_get_current_cgroup_id:
+		return &bpf_get_current_cgroup_id_proto;
+>>>>>>> d4da82b72112 (bpf: implement bpf_get_current_cgroup_id() helper)
 	default:
 		return NULL;
 	}

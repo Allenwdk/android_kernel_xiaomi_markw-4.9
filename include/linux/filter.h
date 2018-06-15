@@ -438,7 +438,15 @@ struct sock_fprog_kern {
 };
 
 struct bpf_binary_header {
+<<<<<<< HEAD
 	unsigned int pages;
+=======
+#ifdef CONFIG_CFI_CLANG
+	u32 magic;
+#endif
+	u16 pages;
+	u16 locked:1;
+>>>>>>> 5659681440ca (bpf: reject any prog that failed read-only lock)
 	u8 image[];
 };
 
@@ -618,14 +626,27 @@ static inline bool bpf_prog_was_classic(const struct bpf_prog *prog)
 
 #define bpf_classic_proglen(fprog) (fprog->len * sizeof(fprog->filter[0]))
 
+<<<<<<< HEAD
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
 static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
 {
 	set_memory_ro((unsigned long)fp, fp->pages);
+=======
+static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
+{
+#ifdef CONFIG_ARCH_HAS_SET_MEMORY
+	fp->locked = 1;
+	WARN_ON_ONCE(set_memory_ro((unsigned long)fp, fp->pages));
+	if (set_memory_ro((unsigned long)fp, fp->pages))
+		fp->locked = 0;
+#endif
+	WARN_ON_ONCE(set_memory_ro((unsigned long)fp, fp->pages));
+>>>>>>> 5659681440ca (bpf: reject any prog that failed read-only lock)
 }
 
 static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
 {
+<<<<<<< HEAD
 	set_memory_rw((unsigned long)fp, fp->pages);
 }
 #else
@@ -637,6 +658,65 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
 {
 }
 #endif /* CONFIG_DEBUG_SET_MODULE_RONX */
+=======
+#ifdef CONFIG_ARCH_HAS_SET_MEMORY
+	if (fp->locked) {
+		WARN_ON_ONCE(set_memory_rw((unsigned long)fp, fp->pages));
+		/* In case set_memory_rw() fails, we want to be the first
+		 * to crash here instead of some random place later on.
+		 */
+		fp->locked = 0;
+	}
+#endif
+}
+
+static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+{
+#ifdef CONFIG_ARCH_HAS_SET_MEMORY
+	hdr->locked = 1;
+	if (set_memory_ro((unsigned long)hdr, hdr->pages))
+		hdr->locked = 0;
+#endif
+}
+
+static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+{
+#ifdef CONFIG_ARCH_HAS_SET_MEMORY
+	if (hdr->locked) {
+		WARN_ON_ONCE(set_memory_rw((unsigned long)hdr, hdr->pages));
+		/* In case set_memory_rw() fails, we want to be the first
+		 * to crash here instead of some random place later on.
+		 */
+		hdr->locked = 0;
+	}
+#endif
+}
+
+static inline struct bpf_binary_header *
+bpf_jit_binary_hdr(const struct bpf_prog *fp)
+{
+	unsigned long real_start = (unsigned long)fp->bpf_func;
+	unsigned long addr = real_start & PAGE_MASK;
+
+	return (void *)addr;
+}
+>>>>>>> 5659681440ca (bpf: reject any prog that failed read-only lock)
+
+#ifdef CONFIG_ARCH_HAS_SET_MEMORY
+static inline int bpf_prog_check_pages_ro_single(const struct bpf_prog *fp)
+{
+	if (!fp->locked)
+		return -ENOLCK;
+
+	if (fp->jited) {
+		const struct bpf_binary_header *hdr = bpf_jit_binary_hdr(fp);
+		if (!hdr->locked)
+			return -ENOLCK;
+
+	}
+	return 0;
+}
+#endif
 
 int sk_filter_trim_cap(struct sock *sk, struct sk_buff *skb, unsigned int cap);
 static inline int sk_filter(struct sock *sk, struct sk_buff *skb)

@@ -1261,7 +1261,14 @@ static int check_map_func_compatibility(struct bpf_map *map, int func_id)
 			goto error;
 		break;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+	case BPF_MAP_TYPE_CGROUP_STORAGE:
+		if (func_id != BPF_FUNC_get_local_storage)
+			goto error;
+		break;
+>>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
 	case BPF_MAP_TYPE_DEVMAP:
 	case BPF_MAP_TYPE_DEVMAP_HASH:
 		if (func_id != BPF_FUNC_redirect_map &&
@@ -1326,7 +1333,14 @@ static int check_map_func_compatibility(struct bpf_map *map, int func_id)
 		if (map->map_type != BPF_MAP_TYPE_SOCKMAP)
 			goto error;
 		break;
+<<<<<<< HEAD
 >>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
+=======
+	case BPF_FUNC_get_local_storage:
+		if (map->map_type != BPF_MAP_TYPE_CGROUP_STORAGE)
+			goto error;
+		break;
+>>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
 	default:
 		break;
 	}
@@ -1456,6 +1470,19 @@ static int check_call(struct bpf_verifier_env *env, int func_id, int insn_idx)
 			return err;
 	}
 
+<<<<<<< HEAD
+=======
+	regs = cur_regs(env);
+
+	/* check that flags argument in get_local_storage(map, flags) is 0,
+	 * this is required because get_local_storage() can't return an error.
+	 */
+	if (func_id == BPF_FUNC_get_local_storage &&
+	    !register_is_null(regs[BPF_REG_2])) {
+		return -EINVAL;
+	}
+
+>>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
 	/* reset caller saved regs */
 	for (i = 0; i < CALLER_SAVED_REGS; i++) {
 		reg = regs + caller_saved[i];

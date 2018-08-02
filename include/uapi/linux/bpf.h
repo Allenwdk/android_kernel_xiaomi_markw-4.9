@@ -334,6 +334,518 @@ union bpf_attr {
 >>>>>>> bc9ebbfad5f6 (BACKPORT: bpf: introduce BPF_RAW_TRACEPOINT)
 } __attribute__((aligned(8)));
 
+<<<<<<< HEAD
+=======
+/* BPF helper function descriptions:
+ *
+ * void *bpf_map_lookup_elem(&map, &key)
+ *     Return: Map value or NULL
+ *
+ * int bpf_map_update_elem(&map, &key, &value, flags)
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_map_delete_elem(&map, &key)
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_probe_read(void *dst, int size, void *src)
+ *     Return: 0 on success or negative error
+ *
+ * u64 bpf_ktime_get_ns(void)
+ *     Return: current ktime
+ *
+ * int bpf_trace_printk(const char *fmt, int fmt_size, ...)
+ *     Return: length of buffer written or negative error
+ *
+ * u32 bpf_prandom_u32(void)
+ *     Return: random value
+ *
+ * u32 bpf_raw_smp_processor_id(void)
+ *     Return: SMP processor ID
+ *
+ * int bpf_skb_store_bytes(skb, offset, from, len, flags)
+ *     store bytes into packet
+ *     @skb: pointer to skb
+ *     @offset: offset within packet from skb->mac_header
+ *     @from: pointer where to copy bytes from
+ *     @len: number of bytes to store into packet
+ *     @flags: bit 0 - if true, recompute skb->csum
+ *             other bits - reserved
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_l3_csum_replace(skb, offset, from, to, flags)
+ *     recompute IP checksum
+ *     @skb: pointer to skb
+ *     @offset: offset within packet where IP checksum is located
+ *     @from: old value of header field
+ *     @to: new value of header field
+ *     @flags: bits 0-3 - size of header field
+ *             other bits - reserved
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_l4_csum_replace(skb, offset, from, to, flags)
+ *     recompute TCP/UDP checksum
+ *     @skb: pointer to skb
+ *     @offset: offset within packet where TCP/UDP checksum is located
+ *     @from: old value of header field
+ *     @to: new value of header field
+ *     @flags: bits 0-3 - size of header field
+ *             bit 4 - is pseudo header
+ *             other bits - reserved
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_tail_call(ctx, prog_array_map, index)
+ *     jump into another BPF program
+ *     @ctx: context pointer passed to next program
+ *     @prog_array_map: pointer to map which type is BPF_MAP_TYPE_PROG_ARRAY
+ *     @index: 32-bit index inside array that selects specific program to run
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_clone_redirect(skb, ifindex, flags)
+ *     redirect to another netdev
+ *     @skb: pointer to skb
+ *     @ifindex: ifindex of the net device
+ *     @flags: bit 0 - if set, redirect to ingress instead of egress
+ *             other bits - reserved
+ *     Return: 0 on success or negative error
+ *
+ * u64 bpf_get_current_pid_tgid(void)
+ *     Return: current->tgid << 32 | current->pid
+ *
+ * u64 bpf_get_current_uid_gid(void)
+ *     Return: current_gid << 32 | current_uid
+ *
+ * int bpf_get_current_comm(char *buf, int size_of_buf)
+ *     stores current->comm into buf
+ *     Return: 0 on success or negative error
+ *
+ * u32 bpf_get_cgroup_classid(skb)
+ *     retrieve a proc's classid
+ *     @skb: pointer to skb
+ *     Return: classid if != 0
+ *
+ * int bpf_skb_vlan_push(skb, vlan_proto, vlan_tci)
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_vlan_pop(skb)
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_get_tunnel_key(skb, key, size, flags)
+ * int bpf_skb_set_tunnel_key(skb, key, size, flags)
+ *     retrieve or populate tunnel metadata
+ *     @skb: pointer to skb
+ *     @key: pointer to 'struct bpf_tunnel_key'
+ *     @size: size of 'struct bpf_tunnel_key'
+ *     @flags: room for future extensions
+ *     Return: 0 on success or negative error
+ *
+ * u64 bpf_perf_event_read(map, flags)
+ *     read perf event counter value
+ *     @map: pointer to perf_event_array map
+ *     @flags: index of event in the map or bitmask flags
+ *     Return: value of perf event counter read or error code
+ *
+ * int bpf_redirect(ifindex, flags)
+ *     redirect to another netdev
+ *     @ifindex: ifindex of the net device
+ *     @flags:
+ *	  cls_bpf:
+ *          bit 0 - if set, redirect to ingress instead of egress
+ *          other bits - reserved
+ *	  xdp_bpf:
+ *	    all bits - reserved
+ *     Return: cls_bpf: TC_ACT_REDIRECT on success or TC_ACT_SHOT on error
+ *	       xdp_bfp: XDP_REDIRECT on success or XDP_ABORT on error
+ * int bpf_redirect_map(map, key, flags)
+ *     redirect to endpoint in map
+ *     @map: pointer to dev map
+ *     @key: index in map to lookup
+ *     @flags: --
+ *     Return: XDP_REDIRECT on success or XDP_ABORT on error
+ *
+ * u32 bpf_get_route_realm(skb)
+ *     retrieve a dst's tclassid
+ *     @skb: pointer to skb
+ *     Return: realm if != 0
+ *
+ * int bpf_perf_event_output(ctx, map, flags, data, size)
+ *     output perf raw sample
+ *     @ctx: struct pt_regs*
+ *     @map: pointer to perf_event_array map
+ *     @flags: index of event in the map or bitmask flags
+ *     @data: data on stack to be output as raw data
+ *     @size: size of data
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_get_stackid(ctx, map, flags)
+ *     walk user or kernel stack and return id
+ *     @ctx: struct pt_regs*
+ *     @map: pointer to stack_trace map
+ *     @flags: bits 0-7 - numer of stack frames to skip
+ *             bit 8 - collect user stack instead of kernel
+ *             bit 9 - compare stacks by hash only
+ *             bit 10 - if two different stacks hash into the same stackid
+ *                      discard old
+ *             other bits - reserved
+ *     Return: >= 0 stackid on success or negative error
+ *
+ * s64 bpf_csum_diff(from, from_size, to, to_size, seed)
+ *     calculate csum diff
+ *     @from: raw from buffer
+ *     @from_size: length of from buffer
+ *     @to: raw to buffer
+ *     @to_size: length of to buffer
+ *     @seed: optional seed
+ *     Return: csum result or negative error code
+ *
+ * int bpf_skb_get_tunnel_opt(skb, opt, size)
+ *     retrieve tunnel options metadata
+ *     @skb: pointer to skb
+ *     @opt: pointer to raw tunnel option data
+ *     @size: size of @opt
+ *     Return: option size
+ *
+ * int bpf_skb_set_tunnel_opt(skb, opt, size)
+ *     populate tunnel options metadata
+ *     @skb: pointer to skb
+ *     @opt: pointer to raw tunnel option data
+ *     @size: size of @opt
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_change_proto(skb, proto, flags)
+ *     Change protocol of the skb. Currently supported is v4 -> v6,
+ *     v6 -> v4 transitions. The helper will also resize the skb. eBPF
+ *     program is expected to fill the new headers via skb_store_bytes
+ *     and lX_csum_replace.
+ *     @skb: pointer to skb
+ *     @proto: new skb->protocol type
+ *     @flags: reserved
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_change_type(skb, type)
+ *     Change packet type of skb.
+ *     @skb: pointer to skb
+ *     @type: new skb->pkt_type type
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_under_cgroup(skb, map, index)
+ *     Check cgroup2 membership of skb
+ *     @skb: pointer to skb
+ *     @map: pointer to bpf_map in BPF_MAP_TYPE_CGROUP_ARRAY type
+ *     @index: index of the cgroup in the bpf_map
+ *     Return:
+ *       == 0 skb failed the cgroup2 descendant test
+ *       == 1 skb succeeded the cgroup2 descendant test
+ *        < 0 error
+ *
+ * u32 bpf_get_hash_recalc(skb)
+ *     Retrieve and possibly recalculate skb->hash.
+ *     @skb: pointer to skb
+ *     Return: hash
+ *
+ * u64 bpf_get_current_task(void)
+ *     Returns current task_struct
+ *     Return: current
+ *
+ * int bpf_probe_write_user(void *dst, void *src, int len)
+ *     safely attempt to write to a location
+ *     @dst: destination address in userspace
+ *     @src: source address on stack
+ *     @len: number of bytes to copy
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_current_task_under_cgroup(map, index)
+ *     Check cgroup2 membership of current task
+ *     @map: pointer to bpf_map in BPF_MAP_TYPE_CGROUP_ARRAY type
+ *     @index: index of the cgroup in the bpf_map
+ *     Return:
+ *       == 0 current failed the cgroup2 descendant test
+ *       == 1 current succeeded the cgroup2 descendant test
+ *        < 0 error
+ *
+ * int bpf_skb_change_tail(skb, len, flags)
+ *     The helper will resize the skb to the given new size, to be used f.e.
+ *     with control messages.
+ *     @skb: pointer to skb
+ *     @len: new skb length
+ *     @flags: reserved
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_skb_pull_data(skb, len)
+ *     The helper will pull in non-linear data in case the skb is non-linear
+ *     and not all of len are part of the linear section. Only needed for
+ *     read/write with direct packet access.
+ *     @skb: pointer to skb
+ *     @len: len to make read/writeable
+ *     Return: 0 on success or negative error
+ *
+ * s64 bpf_csum_update(skb, csum)
+ *     Adds csum into skb->csum in case of CHECKSUM_COMPLETE.
+ *     @skb: pointer to skb
+ *     @csum: csum to add
+ *     Return: csum on success or negative error
+ *
+ * void bpf_set_hash_invalid(skb)
+ *     Invalidate current skb->hash.
+ *     @skb: pointer to skb
+ *
+ * int bpf_get_numa_node_id()
+ *     Return: Id of current NUMA node.
+ *
+ * int bpf_skb_change_head()
+ *     Grows headroom of skb and adjusts MAC header offset accordingly.
+ *     Will extends/reallocae as required automatically.
+ *     May change skb data pointer and will thus invalidate any check
+ *     performed for direct packet access.
+ *     @skb: pointer to skb
+ *     @len: length of header to be pushed in front
+ *     @flags: Flags (unused for now)
+ *     Return: 0 on success or negative error
+ *
+ * int bpf_xdp_adjust_head(xdp_md, delta)
+ *     Adjust the xdp_md.data by delta
+ *     @xdp_md: pointer to xdp_md
+ *     @delta: An positive/negative integer to be added to xdp_md.data
+ *     Return: 0 on success or negative on error
+ *
+ * int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
+ *     Copy a NUL terminated string from unsafe address. In case the string
+ *     length is smaller than size, the target is not padded with further NUL
+ *     bytes. In case the string length is larger than size, just count-1
+ *     bytes are copied and the last byte is set to NUL.
+ *     @dst: destination address
+ *     @size: maximum number of bytes to copy, including the trailing NUL
+ *     @unsafe_ptr: unsafe address
+ *     Return:
+ *       > 0 length of the string including the trailing NUL on success
+ *       < 0 error
+ *
+ * u64 bpf_get_socket_cookie(skb)
+ *     Get the cookie for the socket stored inside sk_buff.
+ *     @skb: pointer to skb
+ *     Return: 8 Bytes non-decreasing number on success or 0 if the socket
+ *     field is missing inside sk_buff
+ *
+ * u32 bpf_get_socket_uid(skb)
+ *     Get the owner uid of the socket stored inside sk_buff.
+ *     @skb: pointer to skb
+ *     Return: uid of the socket owner on success or overflowuid if failed.
+ *
+ * u32 bpf_set_hash(skb, hash)
+ *     Set full skb->hash.
+ *     @skb: pointer to skb
+ *     @hash: hash to set
+ *
+ * int bpf_setsockopt(bpf_socket, level, optname, optval, optlen)
+ *     Calls setsockopt. Not all opts are available, only those with
+ *     integer optvals plus TCP_CONGESTION.
+ *     Supported levels: SOL_SOCKET and IPROTO_TCP
+ *     @bpf_socket: pointer to bpf_socket
+ *     @level: SOL_SOCKET or IPROTO_TCP
+ *     @optname: option name
+ *     @optval: pointer to option value
+ *     @optlen: length of optval in byes
+ *     Return: 0 or negative error
+ *
+ * int bpf_skb_adjust_room(skb, len_diff, mode, flags)
+ *     Grow or shrink room in sk_buff.
+ *     @skb: pointer to skb
+ *     @len_diff: (signed) amount of room to grow/shrink
+ *     @mode: operation mode (enum bpf_adj_room_mode)
+ *     @flags: reserved for future use
+ *     Return: 0 on success or negative error code
+ *
+ * int bpf_sk_redirect_map(map, key, flags)
+ *     Redirect skb to a sock in map using key as a lookup key for the
+ *     sock in map.
+ *     @map: pointer to sockmap
+ *     @key: key to lookup sock in map
+ *     @flags: reserved for future use
+ *     Return: SK_PASS
+ *
+ * int bpf_sock_map_update(skops, map, key, flags)
+ *	@skops: pointer to bpf_sock_ops
+ *	@map: pointer to sockmap to update
+ *	@key: key to insert/update sock in map
+ *	@flags: same flags as map update elem
+ *
+ * int skb_load_bytes_relative(const struct sk_buff *skb, u32 offset, void *to, u32 len, u32 start_header)
+ * 	Description
+ * 		This helper is similar to **bpf_skb_load_bytes**\ () in that
+ * 		it provides an easy way to load *len* bytes from *offset*
+ * 		from the packet associated to *skb*, into the buffer pointed
+ * 		by *to*. The difference to **bpf_skb_load_bytes**\ () is that
+ * 		a fifth argument *start_header* exists in order to select a
+ * 		base offset to start from. *start_header* can be one of:
+ *
+ * 		**BPF_HDR_START_MAC**
+ * 			Base offset to load data from is *skb*'s mac header.
+ * 		**BPF_HDR_START_NET**
+ * 			Base offset to load data from is *skb*'s network header.
+ *
+ * 		In general, "direct packet access" is the preferred method to
+ * 		access packet data, however, this helper is in particular useful
+ * 		in socket filters where *skb*\ **->data** does not always point
+ * 		to the start of the mac header and where "direct packet access"
+ * 		is not available.
+ *
+ * 	Return
+ * 		0 on success, or a negative error in case of failure.
+ *
+ * int bpf_bind(ctx, addr, addr_len)
+ *     Bind socket to address. Only binding to IP is supported, no port can be
+ *     set in addr.
+ *     @ctx: pointer to context of type bpf_sock_addr
+ *     @addr: pointer to struct sockaddr to bind socket to
+ *     @addr_len: length of sockaddr structure
+ *     Return: 0 on success or negative error code
+ *
+ * void* get_local_storage(void *map, u64 flags)
+ *	Description
+ *		Get the pointer to the local storage area.
+ *		The type and the size of the local storage is defined
+ *		by the *map* argument.
+ *		The *flags* meaning is specific for each map type,
+ *		and has to be 0 for cgroup local storage.
+ *
+ *		Depending on the bpf program type, a local storage area
+ *		can be shared between multiple instances of the bpf program,
+ *		running simultaneously.
+ *
+ *		A user should care about the synchronization by himself.
+ *		For example, by using the BPF_STX_XADD instruction to alter
+ *		the shared data.
+ *	Return
+ *		Pointer to the local storage area.
+ */
+#define __BPF_FUNC_MAPPER(FN)		\
+	FN(unspec),			\
+	FN(map_lookup_elem),		\
+	FN(map_update_elem),		\
+	FN(map_delete_elem),		\
+	FN(probe_read),			\
+	FN(ktime_get_ns),		\
+	FN(trace_printk),		\
+	FN(get_prandom_u32),		\
+	FN(get_smp_processor_id),	\
+	FN(skb_store_bytes),		\
+	FN(l3_csum_replace),		\
+	FN(l4_csum_replace),		\
+	FN(tail_call),			\
+	FN(clone_redirect),		\
+	FN(get_current_pid_tgid),	\
+	FN(get_current_uid_gid),	\
+	FN(get_current_comm),		\
+	FN(get_cgroup_classid),		\
+	FN(skb_vlan_push),		\
+	FN(skb_vlan_pop),		\
+	FN(skb_get_tunnel_key),		\
+	FN(skb_set_tunnel_key),		\
+	FN(perf_event_read),		\
+	FN(redirect),			\
+	FN(get_route_realm),		\
+	FN(perf_event_output),		\
+	FN(skb_load_bytes),		\
+	FN(get_stackid),		\
+	FN(csum_diff),			\
+	FN(skb_get_tunnel_opt),		\
+	FN(skb_set_tunnel_opt),		\
+	FN(skb_change_proto),		\
+	FN(skb_change_type),		\
+	FN(skb_under_cgroup),		\
+	FN(get_hash_recalc),		\
+	FN(get_current_task),		\
+	FN(probe_write_user),		\
+	FN(current_task_under_cgroup),	\
+	FN(skb_change_tail),		\
+	FN(skb_pull_data),		\
+	FN(csum_update),		\
+	FN(set_hash_invalid),		\
+	FN(get_numa_node_id),		\
+	FN(skb_change_head),		\
+	FN(xdp_adjust_head),		\
+	FN(probe_read_str),		\
+	FN(get_socket_cookie),		\
+	FN(get_socket_uid),		\
+	FN(set_hash),			\
+	FN(setsockopt),			\
+	FN(skb_adjust_room),		\
+	FN(redirect_map),		\
+	FN(sk_redirect_map),		\
+	FN(sock_map_update),		\
+	FN(xdp_adjust_meta),		\
+	FN(perf_event_read_value),	\
+	FN(perf_prog_read_value),	\
+	FN(getsockopt),			\
+	FN(override_return),		\
+	FN(sock_ops_cb_flags_set),	\
+	FN(msg_redirect_map),		\
+	FN(msg_apply_bytes),		\
+	FN(msg_cork_bytes),		\
+	FN(msg_pull_data),		\
+	FN(bind),			\
+	FN(xdp_adjust_tail),		\
+	FN(skb_get_xfrm_state),		\
+	FN(get_stack),			\
+	FN(skb_load_bytes_relative),	\
+	FN(fib_lookup),			\
+	FN(sock_hash_update),		\
+	FN(msg_redirect_hash),		\
+	FN(sk_redirect_hash),		\
+	FN(lwt_push_encap),		\
+	FN(lwt_seg6_store_bytes),	\
+	FN(lwt_seg6_adjust_srh),	\
+	FN(lwt_seg6_action),		\
+	FN(rc_repeat),			\
+	FN(rc_keydown),			\
+	FN(skb_cgroup_id),		\
+	FN(get_current_cgroup_id),	\
+	FN(get_local_storage),		\
+	FN(sk_select_reuseport),	\
+	FN(skb_ancestor_cgroup_id),	\
+	FN(sk_lookup_tcp),		\
+	FN(sk_lookup_udp),		\
+	FN(sk_release),			\
+	FN(map_push_elem),		\
+	FN(map_pop_elem),		\
+	FN(map_peek_elem),		\
+	FN(msg_push_data),		\
+	FN(msg_pop_data),		\
+	FN(rc_pointer_rel),		\
+	FN(spin_lock),			\
+	FN(spin_unlock),		\
+	FN(sk_fullsock),		\
+	FN(tcp_sock),			\
+	FN(skb_ecn_set_ce),		\
+	FN(get_listener_sock),		\
+	FN(skc_lookup_tcp),		\
+	FN(tcp_check_syncookie),	\
+	FN(sysctl_get_name),		\
+	FN(sysctl_get_current_value),	\
+	FN(sysctl_get_new_value),	\
+	FN(sysctl_set_new_value),	\
+	FN(strtol),			\
+	FN(strtoul),			\
+	FN(sk_storage_get),		\
+	FN(sk_storage_delete),		\
+	FN(send_signal),		\
+	FN(tcp_gen_syncookie),		\
+	FN(skb_output),			\
+	FN(probe_read_user),		\
+	FN(probe_read_kernel),		\
+	FN(probe_read_user_str),	\
+	FN(probe_read_kernel_str),	\
+	FN(tcp_send_ack),		\
+	FN(send_signal_thread),		\
+	FN(jiffies64),			\
+	FN(read_branch_records),	\
+	FN(get_ns_current_pid_tgid),	\
+	FN(xdp_output),			\
+	FN(get_netns_cookie),		\
+	FN(get_current_ancestor_cgroup_id),	\
+	FN(sk_assign),			\
+	FN(ktime_get_boot_ns),
+
+>>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call
  */

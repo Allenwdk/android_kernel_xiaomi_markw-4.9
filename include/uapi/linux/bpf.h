@@ -68,6 +68,20 @@ struct bpf_insn {
 	__s32	imm;		/* signed immediate constant */
 };
 
+<<<<<<< HEAD
+=======
+/* Key of an a BPF_MAP_TYPE_LPM_TRIE entry */
+struct bpf_lpm_trie_key {
+	__u32	prefixlen;	/* up to 32 for AF_INET, 128 for AF_INET6 */
+	__u8	data[0];	/* Arbitrary size */
+};
+
+struct bpf_cgroup_storage_key {
+	__u64	cgroup_inode_id;	/* cgroup inode id */
+	__u32	attach_type;		/* program attach type */
+};
+
+>>>>>>> a237531e1bc5 (bpf: introduce cgroup storage maps)
 /* BPF syscall commands, see bpf(2) man-page for details. */
 enum bpf_cmd {
 	BPF_MAP_CREATE,
@@ -114,6 +128,7 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_DEVMAP,
 	BPF_MAP_TYPE_SOCKMAP,
 	BPF_MAP_TYPE_CPUMAP,
+	BPF_MAP_TYPE_CGROUP_STORAGE = 20,
 	BPF_MAP_TYPE_DEVMAP_HASH = 25,
 >>>>>>> 8480b85ba5fb (bpf: introduce new bpf cpu map type BPF_MAP_TYPE_CPUMAP)
 };

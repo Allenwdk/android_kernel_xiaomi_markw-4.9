@@ -99,38 +99,100 @@ int bpf_map_precharge_memlock(u32 pages)
 	return 0;
 }
 
-static int bpf_map_charge_memlock(struct bpf_map *map)
+static int bpf_charge_memlock(struct user_struct *user, u32 pages)
 {
-	struct user_struct *user = get_current_user();
-	unsigned long memlock_limit;
+	unsigned long memlock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
 
-	memlock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
-
-	atomic_long_add(map->pages, &user->locked_vm);
-
-	if (atomic_long_read(&user->locked_vm) > memlock_limit) {
-		atomic_long_sub(map->pages, &user->locked_vm);
-		free_uid(user);
+	if (atomic_long_add_return(pages, &user->locked_vm) > memlock_limit) {
+		atomic_long_sub(pages, &user->locked_vm);
 		return -EPERM;
 	}
-	map->user = user;
 	return 0;
 }
 
-static void bpf_map_uncharge_memlock(struct bpf_map *map)
+static void bpf_uncharge_memlock(struct user_struct *user, u32 pages)
+{
+	atomic_long_sub(pages, &user->locked_vm);
+}
+static int bpf_map_init_memlock(struct bpf_map *map)
+{
+	struct user_struct *user = get_current_user();
+	int ret;
+
+	ret = bpf_charge_memlock(user, map->pages);
+	if (ret) {
+		free_uid(user);
+		return ret;
+	}
+	map->user = user;
+	return ret;
+}
+
+static void bpf_map_release_memlock(struct bpf_map *map)
 {
 	struct user_struct *user = map->user;
 
-	atomic_long_sub(map->pages, &user->locked_vm);
+	bpf_uncharge_memlock(user, map->pages);
 	free_uid(user);
 }
 
+<<<<<<< HEAD
+=======
+int bpf_map_charge_memlock(struct bpf_map *map, u32 pages)
+{
+	int ret;
+	ret = bpf_charge_memlock(map->user, pages);
+	if (ret)
+		return ret;
+	map->pages += pages;
+	return ret;
+}
+void bpf_map_uncharge_memlock(struct bpf_map *map, u32 pages)
+{
+	bpf_uncharge_memlock(map->user, pages);
+	map->pages -= pages;
+}
+
+static int bpf_map_alloc_id(struct bpf_map *map)
+{
+	int id;
+
+	spin_lock_bh(&map_idr_lock);
+	id = idr_alloc_cyclic(&map_idr, map, 1, INT_MAX, GFP_ATOMIC);
+	if (id > 0)
+		map->id = id;
+	spin_unlock_bh(&map_idr_lock);
+
+	if (WARN_ON_ONCE(!id))
+		return -ENOSPC;
+
+	return id > 0 ? 0 : id;
+}
+
+static void bpf_map_free_id(struct bpf_map *map, bool do_idr_lock)
+{
+	unsigned long flags;
+
+	if (do_idr_lock)
+		spin_lock_irqsave(&map_idr_lock, flags);
+	else
+		__acquire(&map_idr_lock);
+
+	idr_remove(&map_idr, map->id);
+
+	if (do_idr_lock)
+		spin_unlock_irqrestore(&map_idr_lock, flags);
+	else
+		__release(&map_idr_lock);
+}
+
+>>>>>>> b900b1c529a0 (bpf: add ability to charge bpf maps memory dynamically)
 /* called from workqueue */
 static void bpf_map_free_deferred(struct work_struct *work)
 {
 	struct bpf_map *map = container_of(work, struct bpf_map, work);
 
-	bpf_map_uncharge_memlock(map);
+	bpf_map_release_memlock(map);
 	security_bpf_map_free(map);
 	/* implementation dependent freeing */
 	map->ops->map_free(map);
@@ -277,7 +339,7 @@ static int map_create(union bpf_attr *attr)
 	if (err)
 		goto free_map_nouncharge;
 
-	err = bpf_map_charge_memlock(map);
+	err = bpf_map_init_memlock(map);
 	if (err)
 		goto free_map_sec;
 
@@ -289,7 +351,7 @@ static int map_create(union bpf_attr *attr)
 	return err;
 
 free_map:
-	bpf_map_uncharge_memlock(map);
+	bpf_map_release_memlock(map);
 free_map_sec:
 	security_bpf_map_free(map);
 free_map_nouncharge:

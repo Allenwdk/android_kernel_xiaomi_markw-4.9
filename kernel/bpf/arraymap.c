@@ -320,24 +320,21 @@ static void array_map_seq_show_elem(struct bpf_map *map, void *key,
 	seq_puts(m, "\n");
 	rcu_read_unlock();
 }
-static int array_map_check_btf(const struct bpf_map *map, const struct btf *btf,
-			       u32 btf_key_id, u32 btf_value_id)
+
+static int array_map_check_btf(const struct bpf_map *map,
+			       const struct btf_type *key_type,
+			       const struct btf_type *value_type)
 {
-	const struct btf_type *key_type, *value_type;
-	u32 key_size, value_size;
 	u32 int_data;
-	key_type = btf_type_id_size(btf, &btf_key_id, &key_size);
-	if (!key_type || BTF_INFO_KIND(key_type->info) != BTF_KIND_INT)
+
+	if (BTF_INFO_KIND(key_type->info) != BTF_KIND_INT)
 		return -EINVAL;
 	int_data = *(u32 *)(key_type + 1);
-	/* bpf array can only take a u32 key.  This check makes
-	 * sure that the btf matches the attr used during map_create.
+	/* bpf array can only take a u32 key. This check makes sure
+	 * that the btf matches the attr used during map_create.
 	 */
-	if (BTF_INT_BITS(int_data) != 32 || key_size != 4 ||
-	    BTF_INT_OFFSET(int_data))
-		return -EINVAL;
-	value_type = btf_type_id_size(btf, &btf_value_id, &value_size);
-	if (!value_type || value_size > map->value_size)
+
+	if (BTF_INT_BITS(int_data) != 32 || BTF_INT_OFFSET(int_data))
 		return -EINVAL;
 	return 0;
 }
@@ -370,6 +367,7 @@ static const struct bpf_map_ops percpu_array_ops = {
 	.map_lookup_elem = percpu_array_map_lookup_elem,
 	.map_update_elem = array_map_update_elem,
 	.map_delete_elem = array_map_delete_elem,
+	.map_check_btf = array_map_check_btf,
 };
 
 static struct bpf_map_type_list percpu_array_type __read_mostly = {
@@ -496,6 +494,12 @@ static const struct bpf_map_ops prog_array_ops = {
 	.map_delete_elem = fd_array_map_delete_elem,
 	.map_fd_get_ptr = prog_fd_array_get_ptr,
 	.map_fd_put_ptr = prog_fd_array_put_ptr,
+<<<<<<< HEAD
+=======
+	.map_fd_sys_lookup_elem = prog_fd_array_sys_lookup_elem,
+	.map_release_uref = bpf_fd_array_map_clear,
+	.map_check_btf = map_check_no_btf,
+>>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)
 };
 
 static struct bpf_map_type_list prog_array_type __read_mostly = {
@@ -609,6 +613,7 @@ static const struct bpf_map_ops perf_event_array_ops = {
 	.map_fd_get_ptr = perf_event_fd_array_get_ptr,
 	.map_fd_put_ptr = perf_event_fd_array_put_ptr,
 	.map_release = perf_event_fd_array_release,
+	.map_check_btf = map_check_no_btf,
 };
 
 static struct bpf_map_type_list perf_event_array_type __read_mostly = {
@@ -651,11 +656,96 @@ static const struct bpf_map_ops cgroup_array_ops = {
 	.map_delete_elem = fd_array_map_delete_elem,
 	.map_fd_get_ptr = cgroup_fd_array_get_ptr,
 	.map_fd_put_ptr = cgroup_fd_array_put_ptr,
+	.map_check_btf = map_check_no_btf,
 };
 
+<<<<<<< HEAD
 static struct bpf_map_type_list cgroup_array_type __read_mostly = {
 	.ops = &cgroup_array_ops,
 	.type = BPF_MAP_TYPE_CGROUP_ARRAY,
+=======
+static struct bpf_map *array_of_map_alloc(union bpf_attr *attr)
+{
+	struct bpf_map *map, *inner_map_meta;
+
+	inner_map_meta = bpf_map_meta_alloc(attr->inner_map_fd);
+	if (IS_ERR(inner_map_meta))
+		return inner_map_meta;
+
+	map = fd_array_map_alloc(attr);
+	if (IS_ERR(map)) {
+		bpf_map_meta_free(inner_map_meta);
+		return map;
+	}
+
+	map->inner_map_meta = inner_map_meta;
+
+	return map;
+}
+
+static void array_of_map_free(struct bpf_map *map)
+{
+	/* map->inner_map_meta is only accessed by syscall which
+	 * is protected by fdget/fdput.
+	 */
+	bpf_map_meta_free(map->inner_map_meta);
+	bpf_fd_array_map_clear(map);
+	fd_array_map_free(map);
+}
+
+static void *array_of_map_lookup_elem(struct bpf_map *map, void *key)
+{
+	struct bpf_map **inner_map = array_map_lookup_elem(map, key);
+
+	if (!inner_map)
+		return NULL;
+
+	return READ_ONCE(*inner_map);
+}
+
+static u32 array_of_map_gen_lookup(struct bpf_map *map,
+				   struct bpf_insn *insn_buf)
+{
+	struct bpf_array *array = container_of(map, struct bpf_array, map);
+	u32 elem_size = round_up(map->value_size, 8);
+	struct bpf_insn *insn = insn_buf;
+	const int ret = BPF_REG_0;
+	const int map_ptr = BPF_REG_1;
+	const int index = BPF_REG_2;
+
+	*insn++ = BPF_ALU64_IMM(BPF_ADD, map_ptr, offsetof(struct bpf_array, value));
+	*insn++ = BPF_LDX_MEM(BPF_W, ret, index, 0);
+	if (map->unpriv_array) {
+		*insn++ = BPF_JMP_IMM(BPF_JGE, ret, map->max_entries, 6);
+		*insn++ = BPF_ALU32_IMM(BPF_AND, ret, array->index_mask);
+	} else {
+		*insn++ = BPF_JMP_IMM(BPF_JGE, ret, map->max_entries, 5);
+	}
+	if (is_power_of_2(elem_size))
+		*insn++ = BPF_ALU64_IMM(BPF_LSH, ret, ilog2(elem_size));
+	else
+		*insn++ = BPF_ALU64_IMM(BPF_MUL, ret, elem_size);
+	*insn++ = BPF_ALU64_REG(BPF_ADD, ret, map_ptr);
+	*insn++ = BPF_LDX_MEM(BPF_DW, ret, ret, 0);
+	*insn++ = BPF_JMP_IMM(BPF_JEQ, ret, 0, 1);
+	*insn++ = BPF_JMP_IMM(BPF_JA, 0, 0, 1);
+	*insn++ = BPF_MOV64_IMM(ret, 0);
+
+	return insn - insn_buf;
+}
+
+const struct bpf_map_ops array_of_maps_map_ops = {
+	.map_alloc = array_of_map_alloc,
+	.map_free = array_of_map_free,
+	.map_get_next_key = array_map_get_next_key,
+	.map_lookup_elem = array_of_map_lookup_elem,
+	.map_delete_elem = fd_array_map_delete_elem,
+	.map_fd_get_ptr = bpf_map_fd_get_ptr,
+	.map_fd_put_ptr = bpf_map_fd_put_ptr,
+	.map_fd_sys_lookup_elem = bpf_map_fd_sys_lookup_elem,
+	.map_gen_lookup = array_of_map_gen_lookup,
+	.map_check_btf = map_check_no_btf,
+>>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)
 };
 
 static int __init register_cgroup_array_map(void)

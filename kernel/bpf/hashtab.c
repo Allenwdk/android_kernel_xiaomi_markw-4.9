@@ -864,4 +864,131 @@ static int __init register_htab_map(void)
 	bpf_register_map_type(&htab_percpu_type);
 	return 0;
 }
+<<<<<<< HEAD
 late_initcall(register_htab_map);
+=======
+
+static void fd_htab_map_free(struct bpf_map *map)
+{
+	struct bpf_htab *htab = container_of(map, struct bpf_htab, map);
+	struct hlist_nulls_node *n;
+	struct hlist_nulls_head *head;
+	struct htab_elem *l;
+	int i;
+
+	for (i = 0; i < htab->n_buckets; i++) {
+		head = select_bucket(htab, i);
+
+		hlist_nulls_for_each_entry_safe(l, n, head, hash_node) {
+			void *ptr = fd_htab_map_get_ptr(map, l);
+
+			map->ops->map_fd_put_ptr(map, ptr, false);
+		}
+	}
+
+	htab_map_free(map);
+}
+
+/* only called from syscall */
+int bpf_fd_htab_map_lookup_elem(struct bpf_map *map, void *key, u32 *value)
+{
+	void **ptr;
+	int ret = 0;
+
+	if (!map->ops->map_fd_sys_lookup_elem)
+		return -ENOTSUPP;
+
+	rcu_read_lock();
+	ptr = htab_map_lookup_elem(map, key);
+	if (ptr)
+		*value = map->ops->map_fd_sys_lookup_elem(READ_ONCE(*ptr));
+	else
+		ret = -ENOENT;
+	rcu_read_unlock();
+
+	return ret;
+}
+
+/* only called from syscall */
+int bpf_fd_htab_map_update_elem(struct bpf_map *map, struct file *map_file,
+				void *key, void *value, u64 map_flags)
+{
+	void *ptr;
+	int ret;
+	u32 ufd = *(u32 *)value;
+
+	ptr = map->ops->map_fd_get_ptr(map, map_file, ufd);
+	if (IS_ERR(ptr))
+		return PTR_ERR(ptr);
+
+	ret = htab_map_update_elem(map, key, &ptr, map_flags);
+	if (ret)
+		map->ops->map_fd_put_ptr(map, ptr, false);
+
+	return ret;
+}
+
+static struct bpf_map *htab_of_map_alloc(union bpf_attr *attr)
+{
+	struct bpf_map *map, *inner_map_meta;
+
+	inner_map_meta = bpf_map_meta_alloc(attr->inner_map_fd);
+	if (IS_ERR(inner_map_meta))
+		return inner_map_meta;
+
+	map = fd_htab_map_alloc(attr);
+	if (IS_ERR(map)) {
+		bpf_map_meta_free(inner_map_meta);
+		return map;
+	}
+
+	map->inner_map_meta = inner_map_meta;
+
+	return map;
+}
+
+static void *htab_of_map_lookup_elem(struct bpf_map *map, void *key)
+{
+	struct bpf_map **inner_map  = htab_map_lookup_elem(map, key);
+
+	if (!inner_map)
+		return NULL;
+
+	return READ_ONCE(*inner_map);
+}
+
+static u32 htab_of_map_gen_lookup(struct bpf_map *map,
+				  struct bpf_insn *insn_buf)
+{
+	struct bpf_insn *insn = insn_buf;
+	const int ret = BPF_REG_0;
+
+	*insn++ = BPF_EMIT_CALL((u64 (*)(u64, u64, u64, u64, u64))__htab_map_lookup_elem);
+	*insn++ = BPF_JMP_IMM(BPF_JEQ, ret, 0, 2);
+	*insn++ = BPF_ALU64_IMM(BPF_ADD, ret,
+				offsetof(struct htab_elem, key) +
+				round_up(map->key_size, 8));
+	*insn++ = BPF_LDX_MEM(BPF_DW, ret, ret, 0);
+
+	return insn - insn_buf;
+}
+
+static void htab_of_map_free(struct bpf_map *map)
+{
+	bpf_map_meta_free(map->inner_map_meta);
+	fd_htab_map_free(map);
+}
+
+const struct bpf_map_ops htab_of_maps_map_ops = {
+	.map_alloc = htab_of_map_alloc,
+	.map_free = htab_of_map_free,
+	.map_get_next_key = htab_map_get_next_key,
+	.map_lookup_elem = htab_of_map_lookup_elem,
+	.map_delete_elem = htab_map_delete_elem,
+	.map_fd_get_ptr = bpf_map_fd_get_ptr,
+	.map_fd_put_ptr = bpf_map_fd_put_ptr,
+	.map_fd_sys_lookup_elem = bpf_map_fd_sys_lookup_elem,
+	.map_gen_lookup = htab_of_map_gen_lookup,
+	.map_check_btf = map_check_no_btf,
+};
+>>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)

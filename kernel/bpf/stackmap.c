@@ -275,6 +275,7 @@ static const struct bpf_map_ops stack_map_ops = {
 	.map_lookup_elem = stack_map_lookup_elem,
 	.map_update_elem = stack_map_update_elem,
 	.map_delete_elem = stack_map_delete_elem,
+	.map_check_btf = map_check_no_btf,
 };
 
 static struct bpf_map_type_list stack_map_type __read_mostly = {

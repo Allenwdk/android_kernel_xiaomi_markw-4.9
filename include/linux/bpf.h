@@ -151,6 +151,7 @@ enum bpf_reg_type {
 	 */
 	PTR_TO_PACKET,
 	PTR_TO_PACKET_END,	 /* skb->data + headlen */
+<<<<<<< HEAD
 
 	/* PTR_TO_MAP_VALUE_ADJ is used for doing pointer math inside of a map
 	 * elem value.  We only allow this if we can statically verify that
@@ -158,6 +159,9 @@ enum bpf_reg_type {
 	 * map element.
 	 */
 	PTR_TO_MAP_VALUE_ADJ,
+=======
+	PTR_TO_FLOW_KEYS,	 /* reg points to bpf_flow_keys */
+>>>>>>> 3bac91948b0f (BACKPORT: flow_dissector: implements flow dissector BPF hook)
 };
 
 struct bpf_prog;

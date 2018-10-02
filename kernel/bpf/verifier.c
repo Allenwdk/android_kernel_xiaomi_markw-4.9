@@ -2759,6 +2759,7 @@ static void __clear_all_pkt_pointers(struct bpf_verifier_env *env,
 			mark_reg_unknown(env, regs, i);
 >>>>>>> 79362c5a0fad (bpf: squash of log related commits)
 
+<<<<<<< HEAD
 	for (i = 0; i < MAX_BPF_STACK; i += BPF_REG_SIZE) {
 		if (state->stack_slot_type[i] != STACK_SPILL)
 			continue;
@@ -2771,6 +2772,11 @@ static void __clear_all_pkt_pointers(struct bpf_verifier_env *env,
 		reg->imm = 0;
 =======
 		reg = &state->stack[i].spilled_ptr;
+=======
+	bpf_for_each_spilled_reg(i, state, reg) {
+		if (!reg)
+			continue;
+>>>>>>> 1252a872ea97 (bpf: Add iterator for spilled registers)
 		if (reg_is_pkt_pointer_any(reg))
 			__mark_reg_unknown(reg);
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
@@ -4426,10 +4432,9 @@ static void find_good_pkt_pointers(struct bpf_verifier_state *vstate,
 =======
 	for (j = 0; j <= vstate->curframe; j++) {
 		state = vstate->frame[j];
-		for (i = 0; i < state->allocated_stack / BPF_REG_SIZE; i++) {
-			if (state->stack[i].slot_type[0] != STACK_SPILL)
+		bpf_for_each_spilled_reg(i, state, reg) {
+			if (!reg)
 				continue;
-			reg = &state->stack[i].spilled_ptr;
 			if (reg->type == type && reg->id == dst_reg->id)
 				reg->range = max(reg->range, new_range);
 		}
@@ -4651,7 +4656,7 @@ static void mark_map_regs(struct bpf_verifier_state *vstate, u32 regno,
 >>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
 {
 	struct bpf_func_state *state = vstate->frame[vstate->curframe];
-	struct bpf_reg_state *regs = state->regs;
+	struct bpf_reg_state *reg, *regs = state->regs;
 	u32 id = regs[regno].id;
 	int i, j;
 
@@ -4666,8 +4671,8 @@ static void mark_map_regs(struct bpf_verifier_state *vstate, u32 regno,
 =======
 	for (j = 0; j <= vstate->curframe; j++) {
 		state = vstate->frame[j];
-		for (i = 0; i < state->allocated_stack / BPF_REG_SIZE; i++) {
-			if (state->stack[i].slot_type[0] != STACK_SPILL)
+		bpf_for_each_spilled_reg(i, state, reg) {
+			if (!reg)
 				continue;
 			mark_map_reg(&state->stack[i].spilled_ptr, 0, id, is_null);
 		}

@@ -270,6 +270,11 @@ static bool type_is_pkt_pointer(enum bpf_reg_type type)
 	       type == PTR_TO_PACKET_META;
 }
 
+static bool reg_type_may_be_null(enum bpf_reg_type type)
+{
+	return type == PTR_TO_MAP_VALUE_OR_NULL;
+}
+
 /* string representation of 'enum bpf_reg_type' */
 static const char * const reg_type_str[] = {
 	[NOT_INIT]		= "?",
@@ -4602,6 +4607,7 @@ static void reg_set_min_max_inv(struct bpf_reg_state *true_reg,
 	}
 }
 
+<<<<<<< HEAD
 static void mark_map_reg(struct bpf_reg_state *regs, u32 regno, u32 id,
 			 enum bpf_reg_type type)
 {
@@ -4611,6 +4617,12 @@ static void mark_map_reg(struct bpf_reg_state *regs, u32 regno, u32 id,
 <<<<<<< HEAD
 		reg->type = type;
 =======
+=======
+static void mark_ptr_or_null_reg(struct bpf_reg_state *reg, u32 id,
+				 bool is_null)
+{
+	if (reg_type_may_be_null(reg->type) && reg->id == id) {
+>>>>>>> 3fdeb117d17e (bpf: Generalize ptr_or_null regs check)
 		/* Old offset (both fixed and variable parts) should
 		 * have been known-zero, because we don't allow pointer
 		 * arithmetic on pointers that might be NULL.
@@ -4630,8 +4642,6 @@ static void mark_map_reg(struct bpf_reg_state *regs, u32 regno, u32 id,
 			} else {
 				reg->type = PTR_TO_MAP_VALUE;
 			}
-		} else if (reg->type == PTR_TO_SOCKET_OR_NULL) {
-			reg->type = PTR_TO_SOCKET;
 		}
 >>>>>>> 8fd51c1c0823 (bpf: Add PTR_TO_SOCKET verifier type)
 		/* We don't need id from this point onwards anymore, thus we
@@ -4648,12 +4658,17 @@ static void mark_map_reg(struct bpf_reg_state *regs, u32 regno, u32 id,
  * be folded together at some point.
  */
 <<<<<<< HEAD
+<<<<<<< HEAD
 static void mark_map_regs(struct bpf_verifier_state *state, u32 regno,
 			  enum bpf_reg_type type)
 =======
 static void mark_map_regs(struct bpf_verifier_state *vstate, u32 regno,
 			  bool is_null)
 >>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
+=======
+static void mark_ptr_or_null_regs(struct bpf_verifier_state *vstate, u32 regno,
+				  bool is_null)
+>>>>>>> 3fdeb117d17e (bpf: Generalize ptr_or_null regs check)
 {
 	struct bpf_func_state *state = vstate->frame[vstate->curframe];
 	struct bpf_reg_state *reg, *regs = state->regs;
@@ -4661,7 +4676,11 @@ static void mark_map_regs(struct bpf_verifier_state *vstate, u32 regno,
 	int i, j;
 
 	for (i = 0; i < MAX_BPF_REG; i++)
+<<<<<<< HEAD
 		mark_map_reg(regs, i, id, type);
+=======
+		mark_ptr_or_null_reg(&regs[i], id, is_null);
+>>>>>>> 3fdeb117d17e (bpf: Generalize ptr_or_null regs check)
 
 <<<<<<< HEAD
 	for (i = 0; i < MAX_BPF_STACK; i += BPF_REG_SIZE) {
@@ -4674,7 +4693,7 @@ static void mark_map_regs(struct bpf_verifier_state *vstate, u32 regno,
 		bpf_for_each_spilled_reg(i, state, reg) {
 			if (!reg)
 				continue;
-			mark_map_reg(&state->stack[i].spilled_ptr, 0, id, is_null);
+			mark_ptr_or_null_reg(reg, id, is_null);
 		}
 >>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
 	}
@@ -4894,10 +4913,11 @@ static int check_cond_jmp_op(struct bpf_verifier_env *env,
 	/* detect if R == 0 where R is returned from bpf_map_lookup_elem() */
 	if (BPF_SRC(insn->code) == BPF_K &&
 	    insn->imm == 0 && (opcode == BPF_JEQ || opcode == BPF_JNE) &&
-	    dst_reg->type == PTR_TO_MAP_VALUE_OR_NULL) {
-		/* Mark all identical map registers in each branch as either
+	    reg_type_may_be_null(dst_reg->type)) {
+		/* Mark all identical registers in each branch as either
 		 * safe or unknown depending R == 0 or R != 0 conditional.
 		 */
+<<<<<<< HEAD
 <<<<<<< HEAD
 		mark_map_regs(this_branch, insn->dst_reg,
 			      opcode == BPF_JEQ ? PTR_TO_MAP_VALUE : UNKNOWN_VALUE);
@@ -4954,6 +4974,12 @@ static int check_cond_jmp_op(struct bpf_verifier_env *env,
 =======
 		mark_map_regs(this_branch, insn->dst_reg, opcode == BPF_JNE);
 		mark_map_regs(other_branch, insn->dst_reg, opcode == BPF_JEQ);
+=======
+		mark_ptr_or_null_regs(this_branch, insn->dst_reg,
+				      opcode == BPF_JNE);
+		mark_ptr_or_null_regs(other_branch, insn->dst_reg,
+				      opcode == BPF_JEQ);
+>>>>>>> 3fdeb117d17e (bpf: Generalize ptr_or_null regs check)
 	} else if (!try_match_pkt_pointers(insn, dst_reg, &regs[insn->src_reg],
 					   this_branch, other_branch) &&
 		   is_pointer_value(env, insn->dst_reg)) {

@@ -33,6 +33,18 @@ struct bpf_reg_state {
 		 */
 		struct bpf_map *map_ptr;
 	};
+<<<<<<< HEAD
+=======
+	/* Fixed part of pointer offset, pointer types only */
+	s32 off;
+	/* For PTR_TO_PACKET, used to find other pointers with the same variable
+	 * offset, so they can share range knowledge.
+	 * For PTR_TO_MAP_VALUE_OR_NULL this is used to share which map value we
+	 * came from, when one is tested for != NULL.
+	 * For PTR_TO_SOCKET this is used to share which pointers retain the
+	 * same reference to the socket, to determine proper reference freeing.
+	 */
+>>>>>>> 8fd51c1c0823 (bpf: Add PTR_TO_SOCKET verifier type)
 	u32 id;
 	/* Used to determine if any memory access using this register will
 	 * result in a bad access. These two fields must be last.

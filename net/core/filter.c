@@ -36,6 +36,7 @@
 #include <net/protocol.h>
 #include <net/netlink.h>
 #include <linux/skbuff.h>
+#include <linux/skmsg.h>
 #include <net/sock.h>
 #include <net/flow_dissector.h>
 #include <linux/errno.h>
@@ -1882,6 +1883,7 @@ static const struct bpf_func_proto bpf_redirect_proto = {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 BPF_CALL_4(bpf_sk_redirect_hash, struct sk_buff *, skb,
@@ -2001,6 +2003,8 @@ static const struct bpf_func_proto bpf_msg_redirect_map_proto = {
 };
 
 >>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
+=======
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 BPF_CALL_1(bpf_get_cgroup_classid, const struct sk_buff *, skb)
 {
 	return task_get_classid(skb);
@@ -3864,6 +3868,9 @@ xdp_func_proto(enum bpf_func_id func_id)
 	}
 }
 
+const struct bpf_func_proto bpf_sock_map_update_proto __weak;
+const struct bpf_func_proto bpf_sock_hash_update_proto __weak;
+
 static const struct bpf_func_proto *
 cg_skb_func_proto(enum bpf_func_id func_id)
 {
@@ -3893,6 +3900,9 @@ static bool __is_valid_access(int off, int size, enum bpf_access_type type)
 	}
 }
 
+const struct bpf_func_proto bpf_msg_redirect_map_proto __weak;
+const struct bpf_func_proto bpf_msg_redirect_hash_proto __weak;
+
 static const struct bpf_func_proto *sk_msg_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 {
 	switch (func_id) {
@@ -3906,6 +3916,9 @@ static const struct bpf_func_proto *sk_msg_func_proto(enum bpf_func_id func_id, 
 		return bpf_base_func_proto(func_id);
 	}
 }
+
+const struct bpf_func_proto bpf_sk_redirect_map_proto __weak;
+const struct bpf_func_proto bpf_sk_redirect_hash_proto __weak;
 
 static const struct bpf_func_proto *
 sk_skb_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
@@ -5366,14 +5379,14 @@ static u32 sk_msg_convert_ctx_access(enum bpf_access_type type,
 
 	switch (si->off) {
 	case offsetof(struct sk_msg_md, data):
-		*insn++ = BPF_LDX_MEM(BPF_FIELD_SIZEOF(struct sk_msg_buff, data),
+		*insn++ = BPF_LDX_MEM(BPF_FIELD_SIZEOF(struct sk_msg, data),
 				si->dst_reg, si->src_reg,
-				offsetof(struct sk_msg_buff, data));
+				offsetof(struct sk_msg, data));
 		break;
 	case offsetof(struct sk_msg_md, data_end):
-		*insn++ = BPF_LDX_MEM(BPF_FIELD_SIZEOF(struct sk_msg_buff, data_end),
+		*insn++ = BPF_LDX_MEM(BPF_FIELD_SIZEOF(struct sk_msg, data_end),
 				si->dst_reg, si->src_reg,
-				offsetof(struct sk_msg_buff, data_end));
+				offsetof(struct sk_msg, data_end));
 		break;
 	}
 

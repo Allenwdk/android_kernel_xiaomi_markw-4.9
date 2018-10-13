@@ -1575,6 +1575,7 @@ out_free_tp:
 #define BPF_PROG_ATTACH_LAST_FIELD attach_flags
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 static int sockmap_get_from_fd(const union bpf_attr *attr,
 				int type, bool attach)
@@ -1611,6 +1612,8 @@ static int sockmap_get_from_fd(const union bpf_attr *attr,
 }
 
 >>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
+=======
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 #define BPF_F_ATTACH_MASK \
 	(BPF_F_ALLOW_OVERRIDE | BPF_F_ALLOW_MULTI)
 
@@ -1656,10 +1659,12 @@ static int bpf_prog_attach(const union bpf_attr *attr)
                 ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
                 break;
 	case BPF_SK_MSG_VERDICT:
-		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, true);
+		ret = sock_map_get_from_fd(attr, prog);
+		break;
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, true);
+		ret = sock_map_get_from_fd(attr, prog);
+		break;
 	case BPF_FLOW_DISSECTOR:
 		ptype = BPF_PROG_TYPE_FLOW_DISSECTOR;
 		break;
@@ -1740,10 +1745,10 @@ static int bpf_prog_detach(const union bpf_attr *attr)
                 ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
                 break;
 	case BPF_SK_MSG_VERDICT:
-		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, false);
+		return sock_map_get_from_fd(attr, NULL);
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, false);
+		return sock_map_get_from_fd(attr, NULL);
 	case BPF_FLOW_DISSECTOR:
 		return skb_flow_dissector_bpf_prog_detach(attr);
 	case BPF_CGROUP_SYSCTL:

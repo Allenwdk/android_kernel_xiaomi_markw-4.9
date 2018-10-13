@@ -511,6 +511,7 @@ struct bpf_skb_data_end {
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 struct xdp_buff {
 	void *data;
 	void *data_end;
@@ -546,6 +547,8 @@ struct sk_msg_buff {
 /* compute the linear packet data range [data, data_end) which
  * will be accessed by cls_bpf and act_bpf programs
 =======
+=======
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 /* Compute the linear packet data range [data, data_end) which
  * will be accessed by various program types (cls_bpf, act_bpf,
  * lwt, ...). Subsystems allowing direct data access must (!)
@@ -803,10 +806,13 @@ void xdp_do_flush_map(void);
 void bpf_warn_invalid_xdp_action(u32 act);
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 
+<<<<<<< HEAD
 struct sock *do_sk_redirect_map(struct sk_buff *skb);
 struct sock *do_msg_redirect_map(struct sk_msg_buff *md);
 >>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
 
+=======
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 #ifdef CONFIG_BPF_JIT
 extern int bpf_jit_enable;
 extern int bpf_jit_harden;

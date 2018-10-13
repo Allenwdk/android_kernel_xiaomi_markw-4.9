@@ -308,7 +308,27 @@ config BPF_JIT
 
 	  Note, admin should enable this feature changing:
 	  /proc/sys/net/core/bpf_jit_enable
+<<<<<<< HEAD
 	  /proc/sys/net/core/bpf_jit_harden (optional)
+=======
+	  /proc/sys/net/core/bpf_jit_harden   (optional)
+	  /proc/sys/net/core/bpf_jit_kallsyms (optional)
+
+config BPF_STREAM_PARSER
+	bool "enable BPF STREAM_PARSER"
+	depends on INET
+	depends on BPF_SYSCALL
+	depends on CGROUP_BPF
+	select STREAM_PARSER
+	select NET_SOCK_MSG
+	---help---
+	 Enabling this allows a stream parser to be used with
+	 BPF_MAP_TYPE_SOCKMAP.
+
+	 BPF_MAP_TYPE_SOCKMAP provides a map type to use with network sockets.
+	 It can be used to enforce socket policy, implement socket redirects,
+	 etc.
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 
 config NET_FLOW_LIMIT
 	bool
@@ -423,6 +443,21 @@ config DST_CACHE
 	bool
 	default n
 
+<<<<<<< HEAD
+=======
+config GRO_CELLS
+	bool
+	default n
+
+config NET_SOCK_MSG
+	bool
+	default n
+	help
+	  The NET_SOCK_MSG provides a framework for plain sockets (e.g. TCP) or
+	  ULPs (upper layer modules, e.g. TLS) to process L7 application data
+	  with the help of BPF programs.
+
+>>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 config NET_DEVLINK
 	tristate "Network physical/parent device Netlink interface"
 	help

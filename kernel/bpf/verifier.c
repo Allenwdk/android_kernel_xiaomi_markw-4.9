@@ -23,10 +23,12 @@
  * passes through a NULL-check conditional. For the branch wherein the state is
  * changed to CONST_IMM, the verifier releases the reference.
  */
+#include <uapi/linux/btf.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/bpf.h>
+#include <linux/btf.h>
 #include <linux/bpf_verifier.h>
 #include <linux/filter.h>
 #include <net/netlink.h>
@@ -5891,8 +5893,142 @@ err_free:
 	return ret;
 }
 
+<<<<<<< HEAD
 /* the following conditions reduce the number of explored insns
  * from ~140k to ~80k for ultra large programs that use a lot of ptr_to_packet
+=======
+/* The minimum supported BTF func info size */
+#define MIN_BPF_FUNCINFO_SIZE	8
+#define MAX_FUNCINFO_REC_SIZE	252
+static int check_btf_func(struct bpf_prog *prog, struct bpf_verifier_env *env,
+			  union bpf_attr *attr, union bpf_attr __user *uattr)
+{
+	u32 i, nfuncs, urec_size, min_size, prev_offset;
+	u32 krec_size = sizeof(struct bpf_func_info);
+	struct bpf_func_info krecord = {};
+	const struct btf_type *type;
+	void __user *urecord;
+	struct btf *btf;
+	int ret = 0;
+	nfuncs = attr->func_info_cnt;
+
+	if (!nfuncs)
+		return 0;
+
+	if (nfuncs != env->subprog_cnt) {
+		verbose(env, "number of funcs in func_info doesn't match number of subprogs\n");
+		return -EINVAL;
+	}
+
+	urec_size = attr->func_info_rec_size;
+	if (urec_size < MIN_BPF_FUNCINFO_SIZE ||
+	    urec_size > MAX_FUNCINFO_REC_SIZE ||
+	    urec_size % sizeof(u32)) {
+		verbose(env, "invalid func info rec size %u\n", urec_size);
+		return -EINVAL;
+	}
+
+	btf = btf_get_by_fd(attr->prog_btf_fd);
+	if (IS_ERR(btf)) {
+		verbose(env, "unable to get btf from fd\n");
+		return PTR_ERR(btf);
+	}
+
+	urecord = u64_to_user_ptr(attr->func_info);
+	min_size = min_t(u32, krec_size, urec_size);
+	for (i = 0; i < nfuncs; i++) {
+		ret = bpf_check_uarg_tail_zero(urecord, krec_size, urec_size);
+		if (ret) {
+			if (ret == -E2BIG) {
+				verbose(env, "nonzero tailing record in func info");
+				/* set the size kernel expects so loader can zero
+				 * out the rest of the record.
+				 */
+				if (put_user(min_size, &uattr->func_info_rec_size))
+					ret = -EFAULT;
+			}
+			goto free_btf;
+		}
+
+		if (copy_from_user(&krecord, urecord, min_size)) {
+			ret = -EFAULT;
+			goto free_btf;
+		}
+
+		/* check insn_offset */
+		if (i == 0) {
+			if (krecord.insn_offset) {
+				verbose(env,
+					"nonzero insn_offset %u for the first func info record",
+					krecord.insn_offset);
+				ret = -EINVAL;
+				goto free_btf;
+			}
+		} else if (krecord.insn_offset <= prev_offset) {
+			verbose(env,
+				"same or smaller insn offset (%u) than previous func info record (%u)",
+				krecord.insn_offset, prev_offset);
+			ret = -EINVAL;
+			goto free_btf;
+		}
+
+		if (env->subprog_info[i].start != krecord.insn_offset) {
+			verbose(env, "func_info BTF section doesn't match subprog layout in BPF program\n");
+			ret = -EINVAL;
+			goto free_btf;
+		}
+
+		/* check type_id */
+		type = btf_type_by_id(btf, krecord.type_id);
+		if (!type || BTF_INFO_KIND(type->info) != BTF_KIND_FUNC) {
+			verbose(env, "invalid type id %d in func info",
+				krecord.type_id);
+			ret = -EINVAL;
+			goto free_btf;
+		}
+
+		if (i == 0)
+			prog->aux->type_id = krecord.type_id;
+		env->subprog_info[i].type_id = krecord.type_id;
+		prev_offset = krecord.insn_offset;
+		urecord += urec_size;
+	}
+
+	prog->aux->btf = btf;
+	return 0;
+
+free_btf:
+	btf_put(btf);
+	return ret;
+}
+
+/* check %cur's range satisfies %old's */
+static bool range_within(struct bpf_reg_state *old,
+			 struct bpf_reg_state *cur)
+{
+	return old->umin_value <= cur->umin_value &&
+	       old->umax_value >= cur->umax_value &&
+	       old->smin_value <= cur->smin_value &&
+	       old->smax_value >= cur->smax_value;
+}
+
+/* Maximum number of register states that can exist at once */
+#define ID_MAP_SIZE	(MAX_BPF_REG + MAX_BPF_STACK / BPF_REG_SIZE)
+struct idpair {
+	u32 old;
+	u32 cur;
+};
+
+/* If in the old state two registers had the same id, then they need to have
+ * the same id in the new state as well.  But that id could be different from
+ * the old state, so we need to track the mapping from old to new ids.
+ * Once we have seen that, say, a reg with old id 5 had new id 9, any subsequent
+ * regs with old id 5 must also have new id 9 for the new state to be safe.  But
+ * regs with a different old id could still have new id 9, we don't care about
+ * that.
+ * So we look through our idmap to see if this old id has been seen before.  If
+ * so, we require the new id to match; otherwise, we add the id pair to the map.
+>>>>>>> c5b2b74c0c8f (bpf: Introduce bpf_func_info)
  */
 static bool compare_ptrs_to_packet(struct bpf_reg_state *old,
 				   struct bpf_reg_state *cur)
@@ -7317,6 +7453,9 @@ static int jit_subprogs(struct bpf_verifier_env *env)
 		func[i]->aux->name[0] = 'F';
 		func[i]->aux->stack_depth = env->subprog_info[i].stack_depth;
 		func[i]->jit_requested = 1;
+		/* the btf will be freed only at prog->aux */
+		func[i]->aux->btf = prog->aux->btf;
+		func[i]->aux->type_id = env->subprog_info[i].type_id;
 		func[i] = bpf_int_jit_compile(func[i]);
 		if (!func[i]->jited) {
 			err = -ENOTSUPP;
@@ -7628,7 +7767,8 @@ static void free_states(struct bpf_verifier_env *env)
 	kfree(env->explored_states);
 }
 
-int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
+	      union bpf_attr __user *uattr)
 {
 <<<<<<< HEAD
 	char __user *log_ubuf = NULL;
@@ -7720,6 +7860,10 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
 	env->allow_ptr_leaks = capable(CAP_SYS_ADMIN);
 
 	ret = check_cfg(env);
+	if (ret < 0)
+		goto skip_full_check;
+
+	ret = check_btf_func(env->prog, env, attr, uattr);
 	if (ret < 0)
 		goto skip_full_check;
 

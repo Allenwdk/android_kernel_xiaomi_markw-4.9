@@ -318,7 +318,8 @@ struct bpf_prog_aux {
 	const struct bpf_verifier_ops *ops;
 =======
 	u32 id;
-	u32 func_cnt;
+	u32 func_cnt; /* used by non-func prog as the number of func progs */
+	u32 func_idx; /* 0 for non-func prog, the index in func array for func prog */
 	struct bpf_prog **func;
 	void *jit_data; /* JIT specific data. arch dependent */
 	struct latch_tree_node ksym_tnode;
@@ -351,8 +352,13 @@ struct bpf_prog_aux {
 #endif
 	struct bpf_prog_offload *offload;
 	struct btf *btf;
+<<<<<<< HEAD
 	u32 type_id; /* type id for this prog/func */
 >>>>>>> c5b2b74c0c8f (bpf: Introduce bpf_func_info)
+=======
+	struct bpf_func_info *func_info;
+	u32 func_info_cnt;
+>>>>>>> 4539bd294971 (bpf: btf: support proper non-jit func info)
 	union {
 		struct work_struct work;
 		struct rcu_head	rcu;

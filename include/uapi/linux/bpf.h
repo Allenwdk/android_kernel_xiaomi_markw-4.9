@@ -691,6 +691,26 @@ enum bpf_func_id {
 /* BPF_FUNC_perf_event_output for sk_buff input context. */
 #define BPF_F_CTXLEN_MASK		(0xfffffULL << 32)
 
+<<<<<<< HEAD
+=======
+/* Mode for BPF_FUNC_skb_adjust_room helper. */
+enum bpf_adj_room_mode {
+	BPF_ADJ_ROOM_NET,
+};
+
+/* Mode for BPF_FUNC_skb_load_bytes_relative helper. */
+enum bpf_hdr_start_off {
+	BPF_HDR_START_MAC,
+	BPF_HDR_START_NET,
+};
+
+#define __bpf_md_ptr(type, name)	\
+union {					\
+	type name;			\
+	__u64 :64;			\
+} __attribute__((aligned(8)))
+
+>>>>>>> 1ba7edb30678 (bpf: fix pointer offsets in context for 32 bit)
 /* user accessible mirror of in-kernel sk_buff.
  * new fields can only be added to the end of this structure
  */
@@ -725,8 +745,12 @@ struct __sk_buff {
 	__u32 remote_port;	/* Stored in network byte order */
 	__u32 local_port;	/* stored in host byte order */
 
+<<<<<<< HEAD
 	struct bpf_flow_keys *flow_keys;
 >>>>>>> 3bac91948b0f (BACKPORT: flow_dissector: implements flow dissector BPF hook)
+=======
+	__bpf_md_ptr(struct bpf_flow_keys *, flow_keys);
+>>>>>>> 1ba7edb30678 (bpf: fix pointer offsets in context for 32 bit)
 };
 
 struct bpf_tunnel_key {
@@ -770,8 +794,8 @@ enum sk_action {
  * be added to the end of this structure
  */
 struct sk_msg_md {
-	void *data;
-	void *data_end;
+	__bpf_md_ptr(void *, data);
+	__bpf_md_ptr(void *, data_end);
 };
 
 #define BPF_TAG_SIZE	8

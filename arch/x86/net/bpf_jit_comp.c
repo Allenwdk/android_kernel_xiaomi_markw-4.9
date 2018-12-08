@@ -1233,6 +1233,8 @@ skip_init_addrs:
 	}
 
 	if (!image || !prog->is_func || extra_pass) {
+		if (image)
+			bpf_prog_fill_jited_linfo(prog, addrs);
 out_addrs:
 		kfree(addrs);
 		kfree(jit_data);

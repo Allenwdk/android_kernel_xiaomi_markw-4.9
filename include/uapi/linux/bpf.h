@@ -318,7 +318,13 @@ union bpf_attr {
 		__u32		func_info_rec_size;	/* userspace bpf_func_info size */
 		__aligned_u64	func_info;	/* func info */
 		__u32		func_info_cnt;	/* number of bpf_func_info records */
+<<<<<<< HEAD
 >>>>>>> c5b2b74c0c8f (bpf: Introduce bpf_func_info)
+=======
+		__u32		line_info_rec_size;	/* userspace bpf_line_info size */
+		__aligned_u64	line_info;	/* line info */
+		__u32		line_info_cnt;	/* number of bpf_line_info records */
+>>>>>>> 3b623692a07b (bpf: Add bpf_line_info support)
 	};
 
 	struct { /* anonymous struct used by BPF_OBJ_* commands */
@@ -1435,6 +1441,12 @@ struct bpf_prog_info {
 	__u32 func_info_rec_size;
 	__aligned_u64 func_info;
 	__u32 func_info_cnt;
+	__u32 line_info_cnt;
+	__aligned_u64 line_info;
+	__aligned_u64 jited_line_info;
+	__u32 jited_line_info_cnt;
+	__u32 line_info_rec_size;
+	__u32 jited_line_info_rec_size;
 } __attribute__((aligned(8)));
 
 struct bpf_map_info {
@@ -1580,6 +1592,15 @@ struct bpf_sysctl {
 struct bpf_func_info {
 	__u32	insn_offset;
 	__u32	type_id;
+};
+
+#define BPF_LINE_INFO_LINE_NUM(line_col)	((line_col) >> 10)
+#define BPF_LINE_INFO_LINE_COL(line_col)	((line_col) & 0x3ff)
+struct bpf_line_info {
+	__u32	insn_off;
+	__u32	file_name_off;
+	__u32	line_off;
+	__u32	line_col;
 };
 
 #endif /* _UAPI__LINUX_BPF_H__ */

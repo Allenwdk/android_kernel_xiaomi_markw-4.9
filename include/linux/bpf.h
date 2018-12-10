@@ -18,6 +18,7 @@ struct perf_event;
 struct bpf_map;
 struct sock;
 struct seq_file;
+struct btf;
 struct btf_type;
 
 /* map is generic key/value storage optionally accesible by eBPF programs */
@@ -55,6 +56,7 @@ struct bpf_map_ops {
 >>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
 =======
 	int (*map_check_btf)(const struct bpf_map *map,
+			     const struct btf *btf,
 			     const struct btf_type *key_type,
 			     const struct btf_type *value_type);
 >>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)
@@ -128,6 +130,7 @@ static inline bool bpf_map_support_seq_show(const struct bpf_map *map)
 }
 
 int map_check_no_btf(const struct bpf_map *map,
+		     const struct btf *btf,
 		     const struct btf_type *key_type,
 		     const struct btf_type *value_type);
 

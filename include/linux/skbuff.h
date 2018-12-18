@@ -3868,15 +3868,29 @@ static inline void skb_init_secmark(struct sk_buff *skb)
 { }
 #endif
 
+static inline int secpath_exists(const struct sk_buff *skb)
+{
+#ifdef CONFIG_XFRM
+	return skb->sp != NULL;
+#else
+	return 0;
+#endif
+}
+
 static inline bool skb_irq_freeable(const struct sk_buff *skb)
 {
 	return !skb->destructor &&
+<<<<<<< HEAD
 #if IS_ENABLED(CONFIG_XFRM)
 		!skb->sp &&
 #endif
 #if IS_ENABLED(CONFIG_NF_CONNTRACK)
 		!skb->nfct &&
 #endif
+=======
+		!secpath_exists(skb) &&
+		!skb_nfct(skb) &&
+>>>>>>> 11c1bc867fd6 (net: move secpath_exist helper to sk_buff.h)
 		!skb->_skb_refdst &&
 		!skb_has_frag_list(skb);
 }

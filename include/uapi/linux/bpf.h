@@ -253,6 +253,7 @@ enum bpf_attach_type {
 #define BPF_ANY		0 /* create new element or update existing */
 #define BPF_NOEXIST	1 /* create new element if it didn't exist */
 #define BPF_EXIST	2 /* update existing element */
+#define BPF_F_LOCK	4 /* spin_lock-ed map_lookup/map_update */
 
 #define BPF_F_NO_PREALLOC	(1U << 0)
 

@@ -131,9 +131,13 @@ struct bpf_verifier_state {
 	/* call stack tracking */
 	struct bpf_func_state *frame[MAX_CALL_FRAMES];
 	struct bpf_verifier_state *parent;
-	bool speculative;
 	u32 curframe;
+<<<<<<< HEAD
 >>>>>>> 10423c35d702 (bpf: introduce function calls (verification))
+=======
+	u32 active_spin_lock;
+	bool speculative;
+>>>>>>> b4eac9a69945 (bpf: introduce bpf_spin_lock)
 };
 
 #define bpf_get_spilled_reg(slot, frame)				\

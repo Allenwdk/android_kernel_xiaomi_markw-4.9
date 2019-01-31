@@ -475,14 +475,46 @@ static void free_htab_elem(struct bpf_htab *htab, struct htab_elem *l)
 	}
 }
 
+<<<<<<< HEAD
+=======
+static void pcpu_copy_value(struct bpf_htab *htab, void __percpu *pptr,
+			    void *value, bool onallcpus)
+{
+	if (!onallcpus) {
+		/* copy true value_size bytes */
+		memcpy(this_cpu_ptr(pptr), value, htab->map.value_size);
+	} else {
+		u32 size = round_up(htab->map.value_size, 8);
+		int off = 0, cpu;
+
+		for_each_possible_cpu(cpu) {
+			bpf_long_memcpy(per_cpu_ptr(pptr, cpu),
+					value + off, size);
+			off += size;
+		}
+	}
+}
+
+static bool fd_htab_map_needs_adjust(const struct bpf_htab *htab)
+{
+	return htab->map.map_type == BPF_MAP_TYPE_HASH_OF_MAPS &&
+	       BITS_PER_LONG == 64;
+}
+
+>>>>>>> b4eac9a69945 (bpf: introduce bpf_spin_lock)
 static struct htab_elem *alloc_htab_elem(struct bpf_htab *htab, void *key,
 					 void *value, u32 key_size, u32 hash,
 					 bool percpu, bool onallcpus,
 					 bool old_elem_exists)
 {
 	u32 size = htab->map.value_size;
+<<<<<<< HEAD
 	bool prealloc = !(htab->map.map_flags & BPF_F_NO_PREALLOC);
 	struct htab_elem *l_new;
+=======
+	bool prealloc = htab_is_prealloc(htab);
+	struct htab_elem *l_new, **pl_new;
+>>>>>>> b4eac9a69945 (bpf: introduce bpf_spin_lock)
 	void __percpu *pptr;
 	int err = 0;
 
@@ -504,6 +536,8 @@ static struct htab_elem *alloc_htab_elem(struct bpf_htab *htab, void *key,
 			if (!l_new)
 				return ERR_PTR(-ENOMEM);
 		}
+		check_and_init_map_lock(&htab->map,
+					l_new->key + round_up(key_size, 8));
 	}
 
 	if (err) {
@@ -523,9 +557,13 @@ static struct htab_elem *alloc_htab_elem(struct bpf_htab *htab, void *key,
 
 	memcpy(l_new->key, key, key_size);
 	if (percpu) {
+<<<<<<< HEAD
 		/* round up value_size to 8 bytes */
 		size = round_up(size, 8);
 
+=======
+		size = round_up(size, 8);
+>>>>>>> b4eac9a69945 (bpf: introduce bpf_spin_lock)
 		if (prealloc) {
 			pptr = htab_elem_get_ptr(l_new, key_size);
 		} else {
@@ -552,8 +590,13 @@ static struct htab_elem *alloc_htab_elem(struct bpf_htab *htab, void *key,
 		}
 		if (!prealloc)
 			htab_elem_set_ptr(l_new, key_size, pptr);
-	} else {
+	} else if (fd_htab_map_needs_adjust(htab)) {
+		size = round_up(size, 8);
 		memcpy(l_new->key + round_up(key_size, 8), value, size);
+	} else {
+		copy_map_value(&htab->map,
+			       l_new->key + round_up(key_size, 8),
+			       value);
 	}
 
 	l_new->hash = hash;

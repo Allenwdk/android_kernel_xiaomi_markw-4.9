@@ -2880,7 +2880,25 @@ static bool arg_type_is_mem_size(enum bpf_arg_type type)
 	       type == ARG_CONST_SIZE_OR_ZERO;
 }
 
+<<<<<<< HEAD
 >>>>>>> 27dcbb371004 (bpf, verifier: detect misconfigured mem, size argument pair)
+=======
+static bool arg_type_is_int_ptr(enum bpf_arg_type type)
+{
+	return type == ARG_PTR_TO_INT ||
+	       type == ARG_PTR_TO_LONG;
+}
+
+static int int_ptr_type_to_size(enum bpf_arg_type type)
+{
+	if (type == ARG_PTR_TO_INT)
+		return sizeof(u32);
+	else if (type == ARG_PTR_TO_LONG)
+		return sizeof(u64);
+	return -EINVAL;
+}
+
+>>>>>>> 5a82e40ab7a1 (bpf: Introduce ARG_PTR_TO_{INT,LONG} arg types)
 static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 			  enum bpf_arg_type arg_type,
 			  struct bpf_call_arg_meta *meta)
@@ -3011,7 +3029,17 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 			 type != expected_type)
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
 			goto err_type;
+<<<<<<< HEAD
 		meta->raw_mode = arg_type == ARG_PTR_TO_RAW_STACK;
+=======
+		meta->raw_mode = arg_type == ARG_PTR_TO_UNINIT_MEM;
+	} else if (arg_type_is_int_ptr(arg_type)) {
+		expected_type = PTR_TO_STACK;
+		if (!type_is_pkt_pointer(type) &&
+		    type != PTR_TO_MAP_VALUE &&
+		    type != expected_type)
+			goto err_type;
+>>>>>>> 5a82e40ab7a1 (bpf: Introduce ARG_PTR_TO_{INT,LONG} arg types)
 	} else {
 		verbose(env, "unsupported arg_type %d\n", arg_type);
 		return -EFAULT;
@@ -3163,7 +3191,16 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		err = check_helper_mem_access(env, regno - 1,
 					      reg->umax_value,
 					      zero_size_allowed, meta);
+<<<<<<< HEAD
 >>>>>>> 79362c5a0fad (bpf: squash of log related commits)
+=======
+	} else if (arg_type_is_int_ptr(arg_type)) {
+		int size = int_ptr_type_to_size(arg_type);
+		err = check_helper_mem_access(env, regno, size, false, meta);
+		if (err)
+			return err;
+		err = check_ptr_alignment(env, reg, 0, size, true);
+>>>>>>> 5a82e40ab7a1 (bpf: Introduce ARG_PTR_TO_{INT,LONG} arg types)
 	}
 
 	return err;

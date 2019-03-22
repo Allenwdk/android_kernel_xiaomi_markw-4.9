@@ -3914,8 +3914,15 @@ static int check_helper_call(struct bpf_verifier_env *env, int func_id, int insn
 			regs[BPF_REG_0].id = ++env->id_gen;
 		}
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> a2ef751de395 (SQUASH! bpf: Add a bpf_sock pointer to __sk_buff and a bpf_sk_fullsock helpe)
 =======
+=======
+	} else if (fn->ret_type == RET_PTR_TO_SOCK_COMMON_OR_NULL) {
+		mark_reg_known_zero(env, regs, BPF_REG_0);
+		regs[BPF_REG_0].type = PTR_TO_SOCK_COMMON_OR_NULL;
+		regs[BPF_REG_0].id = ++env->id_gen;
+>>>>>>> 62e50b110a24 (bpf: allow helpers to return PTR_TO_SOCK_COMMON)
 	} else if (fn->ret_type == RET_PTR_TO_TCP_SOCK_OR_NULL) {
 		mark_reg_known_zero(env, regs, BPF_REG_0);
 		regs[BPF_REG_0].type = PTR_TO_TCP_SOCK_OR_NULL;

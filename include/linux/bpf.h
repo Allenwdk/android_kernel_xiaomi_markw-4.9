@@ -59,7 +59,16 @@ struct bpf_map_ops {
 			     const struct btf *btf,
 			     const struct btf_type *key_type,
 			     const struct btf_type *value_type);
+<<<<<<< HEAD
 >>>>>>> 3160e4a35a8a (bpf: decouple btf from seq bpf fs dump and enable more maps)
+=======
+
+	/* Direct value access helpers. */
+	int (*map_direct_value_addr)(const struct bpf_map *map,
+				     u64 *imm, u32 off);
+	int (*map_direct_value_meta)(const struct bpf_map *map,
+				     u64 imm, u32 *off);
+>>>>>>> 9c10dc89bf41 (bpf: implement lookup-free direct value access for maps)
 };
 
 struct bpf_map {

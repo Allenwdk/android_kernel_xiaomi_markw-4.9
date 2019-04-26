@@ -300,7 +300,11 @@ enum bpf_reg_type {
 =======
 	PTR_TO_TCP_SOCK,	 /* reg points to struct tcp_sock */
 	PTR_TO_TCP_SOCK_OR_NULL, /* reg points to struct tcp_sock or NULL */
+<<<<<<< HEAD
 >>>>>>> 6df7f32f05b9 (bpf: Add struct bpf_tcp_sock and BPF_FUNC_tcp_sock)
+=======
+	PTR_TO_TP_BUFFER,	 /* reg points to a writable raw tp's buffer */
+>>>>>>> d229d78e2f99 (bpf: add writable context for raw tracepoints)
 };
 
 struct bpf_prog;
@@ -365,6 +369,7 @@ struct bpf_prog_aux {
 	atomic_t refcnt;
 	u32 used_map_cnt;
 	u32 max_ctx_offset;
+	u32 max_tp_access;
 	u32 stack_depth;
 <<<<<<< HEAD
 	const struct bpf_verifier_ops *ops;

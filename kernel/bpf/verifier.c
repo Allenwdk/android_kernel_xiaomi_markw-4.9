@@ -2940,10 +2940,15 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 
 	if (arg_type == ARG_PTR_TO_MAP_KEY ||
 	    arg_type == ARG_PTR_TO_MAP_VALUE ||
-	    arg_type == ARG_PTR_TO_UNINIT_MAP_VALUE) {
+	    arg_type == ARG_PTR_TO_UNINIT_MAP_VALUE ||
+	    arg_type == ARG_PTR_TO_MAP_VALUE_OR_NULL) {
 		expected_type = PTR_TO_STACK;
-		if (!type_is_pkt_pointer(type) && type != PTR_TO_MAP_VALUE &&
-		    type != expected_type)
+		if (register_is_null(reg) &&
+		    arg_type == ARG_PTR_TO_MAP_VALUE_OR_NULL)
+			/* final test in check_stack_boundary() */;
+		else if (!type_is_pkt_pointer(type) &&
+			 type != PTR_TO_MAP_VALUE &&
+			 type != expected_type)
 			goto err_type;
 	} else if (arg_type == ARG_CONST_STACK_SIZE ||
 		   arg_type == ARG_CONST_STACK_SIZE_OR_ZERO) {
@@ -2989,8 +2994,15 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 		}
 		meta->ptr_id = reg->id;
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> a91bf4d10f2c (bpf: Add reference tracking to verifier)
 =======
+=======
+	} else if (arg_type == ARG_PTR_TO_SOCKET) {
+		expected_type = PTR_TO_SOCKET;
+		if (type != expected_type)
+			goto err_type;
+>>>>>>> eb44100735a5 (bpf: Introduce bpf sk local storage)
 	} else if (arg_type == ARG_PTR_TO_SPIN_LOCK) {
 		if (meta->func_id == BPF_FUNC_spin_lock) {
 			if (process_spin_lock(env, regno, true))
@@ -3084,6 +3096,8 @@ static int check_func_arg(struct bpf_verifier_env *env, u32 regno,
 	} else if (arg_type == ARG_PTR_TO_MAP_VALUE) {
 =======
 	} else if (arg_type == ARG_PTR_TO_MAP_VALUE ||
+		   (arg_type == ARG_PTR_TO_MAP_VALUE_OR_NULL &&
+		    !register_is_null(reg)) ||
 		   arg_type == ARG_PTR_TO_UNINIT_MAP_VALUE) {
 >>>>>>> 4f4fe0ffa4df (bpf/verifier: add ARG_PTR_TO_UNINIT_MAP_VALUE)
 		/* bpf_map_xxx(..., map_ptr, ..., value) call:
@@ -3269,7 +3283,15 @@ static int check_map_func_compatibility(struct bpf_verifier_env *env,
 		    func_id != BPF_FUNC_msg_redirect_map)
 			goto error;
 		break;
+<<<<<<< HEAD
 >>>>>>> 546114ca7730 (BACKPORT: bpf: create tcp_bpf_ulp allowing BPF to monitor socket TX/RX data)
+=======
+	case BPF_MAP_TYPE_SK_STORAGE:
+		if (func_id != BPF_FUNC_sk_storage_get &&
+		    func_id != BPF_FUNC_sk_storage_delete)
+			goto error;
+		break;
+>>>>>>> eb44100735a5 (bpf: Introduce bpf sk local storage)
 	default:
 		break;
 	}
@@ -3322,7 +3344,15 @@ static int check_map_func_compatibility(struct bpf_verifier_env *env,
 		    map->map_type != BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE)
 			goto error;
 		break;
+<<<<<<< HEAD
 >>>>>>> b0bf09fb61e1 (bpf: introduce the bpf_get_local_storage() helper function)
+=======
+	case BPF_FUNC_sk_storage_get:
+	case BPF_FUNC_sk_storage_delete:
+		if (map->map_type != BPF_MAP_TYPE_SK_STORAGE)
+			goto error;
+		break;
+>>>>>>> eb44100735a5 (bpf: Introduce bpf sk local storage)
 	default:
 		break;
 	}

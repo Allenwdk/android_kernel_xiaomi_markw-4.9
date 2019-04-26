@@ -33,3 +33,8 @@ obj-$(CONFIG_SOCKEV_NLMCAST) += sockev_nlmcast.o
 obj-$(CONFIG_DST_CACHE) += dst_cache.o
 obj-$(CONFIG_HWBM) += hwbm.o
 obj-$(CONFIG_NET_DEVLINK) += devlink.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_GRO_CELLS) += gro_cells.o
+obj-$(CONFIG_BPF_SYSCALL) += bpf_sk_storage.o
+>>>>>>> eb44100735a5 (bpf: Introduce bpf sk local storage)

@@ -522,6 +522,13 @@ struct bpf_prog_array {
 
 struct bpf_prog_array *bpf_prog_array_alloc(u32 prog_cnt, gfp_t flags);
 void bpf_prog_array_free(struct bpf_prog_array __rcu *progs);
+<<<<<<< HEAD
+=======
+int bpf_prog_array_length(struct bpf_prog_array __rcu *progs);
+bool bpf_prog_array_is_empty(struct bpf_prog_array *array);
+int bpf_prog_array_copy_to_user(struct bpf_prog_array __rcu *progs,
+				__u32 __user *prog_ids, u32 cnt);
+>>>>>>> dd05ab5efc38 (bpf: implement getsockopt and setsockopt hooks)
 
 void bpf_prog_array_delete_safe(struct bpf_prog_array __rcu *progs,
 				struct bpf_prog *old_prog);
@@ -819,6 +826,7 @@ extern const struct bpf_func_proto bpf_spin_lock_proto;
 extern const struct bpf_func_proto bpf_spin_unlock_proto;
 >>>>>>> b4eac9a69945 (bpf: introduce bpf_spin_lock)
 extern const struct bpf_func_proto bpf_get_local_storage_proto;
+extern const struct bpf_func_proto bpf_tcp_sock_proto;
 
 /* Shared helpers among cBPF and eBPF. */
 void bpf_user_rnd_init_once(void);

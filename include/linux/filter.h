@@ -990,5 +990,18 @@ struct bpf_sysctl_kern {
 	int write;
 };
 
+<<<<<<< HEAD
 >>>>>>> 855f570c3772 (BACKPORT: bpf: Sysctl hook)
+=======
+struct bpf_sockopt_kern {
+	struct sock	*sk;
+	u8		*optval;
+	u8		*optval_end;
+	s32		level;
+	s32		optname;
+	s32		optlen;
+	s32		retval;
+};
+
+>>>>>>> dd05ab5efc38 (bpf: implement getsockopt and setsockopt hooks)
 #endif /* __LINUX_FILTER_H__ */

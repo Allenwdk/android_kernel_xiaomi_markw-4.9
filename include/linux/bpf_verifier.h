@@ -123,7 +123,12 @@ __printf(2, 3) void bpf_verifier_log_write(struct bpf_verifier_log *log,
 void bpf_verifier_vlog(struct bpf_verifier_log *log, const char *fmt,
 		       va_list args);
 
+<<<<<<< HEAD
 >>>>>>> 9faa02816919 (bpf: offload: allow netdev to disappear while verifier is running)
+=======
+#define BPF_MAX_SUBPROGS 256
+
+>>>>>>> 79362c5a0fad (bpf: squash of log related commits)
 /* single container for all structs
  * one verifier_env per bpf_check() call
  */
@@ -143,6 +148,11 @@ struct bpf_verifier_env {
 	bool seen_direct_write;
 	bool varlen_map_value_access;
 	struct bpf_insn_aux_data *insn_aux_data; /* array of per-insn state */
+
+	struct bpf_verifier_log log;
+
+	u32 subprog_starts[BPF_MAX_SUBPROGS];
+	u32 subprog_cnt;
 };
 
 <<<<<<< HEAD

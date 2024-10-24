@@ -793,6 +793,14 @@ union bpf_attr {
  *     @xdp_md: pointer to xdp_md
  *     @delta: An positive/negative integer to be added to xdp_md.data_meta
  *     Return: 0 on success or negative on error
+ *
+ * struct bpf_sock *bpf_sk_fullsock(struct bpf_sock *sk)
+ *	Description
+ *		This helper gets a **struct bpf_sock** pointer such
+ *		that all the fields in bpf_sock can be accessed.
+ *	Return
+ *		A **struct bpf_sock** pointer on success, or NULL in
+ *		case of failure.
  */
 #define __BPF_FUNC_MAPPER(FN)		\
 	FN(unspec),			\
@@ -1371,7 +1379,11 @@ struct __sk_buff {
 =======
 	/* ... here. */
 	__u32 data_meta;
+<<<<<<< HEAD
 >>>>>>> b4396f91d7ce (bpf: add meta pointer for direct access)
+=======
+	__bpf_md_ptr(struct bpf_sock *, sk);
+>>>>>>> a2ef751de395 (SQUASH! bpf: Add a bpf_sock pointer to __sk_buff and a bpf_sk_fullsock helpe)
 };
 
 struct bpf_tunnel_key {

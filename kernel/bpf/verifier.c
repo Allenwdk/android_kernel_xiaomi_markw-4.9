@@ -8124,8 +8124,10 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 		 */
 		if (prog->jit_requested && BITS_PER_LONG == 64 &&
 		    insn->imm == BPF_FUNC_map_lookup_elem) {
+			aux = &env->insn_aux_data[i + delta];
 			if (bpf_map_ptr_poisoned(aux))
 				goto patch_call_imm;
+
 			map_ptr = BPF_MAP_PTR(aux->map_state);
 			if (!map_ptr->ops->map_gen_lookup)
 				goto patch_call_imm;
@@ -8270,6 +8272,7 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 		ret = -ENOMEM;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 		log_buf = vmalloc(log_size);
 		if (!log_buf)
 =======
@@ -8277,6 +8280,11 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 		log->level = 0;
 =======
 >>>>>>> 79362c5a0fad (bpf: squash of log related commits)
+=======
+		log->kbuf = vmalloc(log->len_total);
+		if (!log->kbuf)
+			goto err_unlock;
+>>>>>>> 3895d2a8ba09 (fixup: add back code missed during BPF picking)
 	}
 
 	env->strict_alignment = !!(attr->prog_flags & BPF_F_STRICT_ALIGNMENT);

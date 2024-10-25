@@ -187,7 +187,7 @@ struct bpf_ext_analyzer_ops {
 
 struct bpf_verifier_log {
 	u32 level;
-	char kbuf[BPF_VERIFIER_TMP_LOG_SIZE];
+	char *kbuf;
 	char __user *ubuf;
 	u32 len_used;
 	u32 len_total;

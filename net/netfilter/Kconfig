@@ -580,8 +580,6 @@ config NFT_HASH
 	  This option adds the "hash" expression that you can use to perform
 	  a hash operation on registers.
 
-<<<<<<< HEAD
-=======
 config NFT_FIB
 	tristate
 
@@ -604,7 +602,6 @@ config NFT_SOCKET
 	  This option allows matching for the presence or absence of a
 	  corresponding socket and its attributes.
 
->>>>>>> 5967cc59eda5 (netfilter: nf_tables: add support for native socket matching)
 if NF_TABLES_NETDEV
 
 config NF_DUP_NETDEV

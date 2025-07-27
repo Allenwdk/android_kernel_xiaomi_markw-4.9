@@ -308,9 +308,6 @@ config BPF_JIT
 
 	  Note, admin should enable this feature changing:
 	  /proc/sys/net/core/bpf_jit_enable
-<<<<<<< HEAD
-	  /proc/sys/net/core/bpf_jit_harden (optional)
-=======
 	  /proc/sys/net/core/bpf_jit_harden   (optional)
 	  /proc/sys/net/core/bpf_jit_kallsyms (optional)
 
@@ -328,7 +325,6 @@ config BPF_STREAM_PARSER
 	 BPF_MAP_TYPE_SOCKMAP provides a map type to use with network sockets.
 	 It can be used to enforce socket policy, implement socket redirects,
 	 etc.
->>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 
 config NET_FLOW_LIMIT
 	bool
@@ -443,8 +439,6 @@ config DST_CACHE
 	bool
 	default n
 
-<<<<<<< HEAD
-=======
 config GRO_CELLS
 	bool
 	default n
@@ -457,7 +451,6 @@ config NET_SOCK_MSG
 	  ULPs (upper layer modules, e.g. TLS) to process L7 application data
 	  with the help of BPF programs.
 
->>>>>>> 15a328ec6c48 (bpf, sockmap: convert to generic sk_msg interface)
 config NET_DEVLINK
 	tristate "Network physical/parent device Netlink interface"
 	help

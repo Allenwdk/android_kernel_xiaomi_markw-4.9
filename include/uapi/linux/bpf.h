@@ -68,8 +68,6 @@ struct bpf_insn {
 	__s32	imm;		/* signed immediate constant */
 };
 
-<<<<<<< HEAD
-=======
 /* Key of an a BPF_MAP_TYPE_LPM_TRIE entry */
 struct bpf_lpm_trie_key {
 	__u32	prefixlen;	/* up to 32 for AF_INET, 128 for AF_INET6 */
@@ -81,7 +79,6 @@ struct bpf_cgroup_storage_key {
 	__u32	attach_type;		/* program attach type */
 };
 
->>>>>>> a237531e1bc5 (bpf: introduce cgroup storage maps)
 /* BPF syscall commands, see bpf(2) man-page for details. */
 enum bpf_cmd {
 	BPF_MAP_CREATE,
@@ -94,8 +91,6 @@ enum bpf_cmd {
 	BPF_OBJ_GET,
 	BPF_PROG_ATTACH,
 	BPF_PROG_DETACH,
-<<<<<<< HEAD
-=======
 	BPF_PROG_TEST_RUN,
 	BPF_PROG_GET_NEXT_ID,
 	BPF_MAP_GET_NEXT_ID,
@@ -105,11 +100,9 @@ enum bpf_cmd {
 	BPF_PROG_QUERY,
 	BPF_RAW_TRACEPOINT_OPEN,
 	BPF_BTF_LOAD = 18,
-<<<<<<< HEAD
->>>>>>> bc9ebbfad5f6 (BACKPORT: bpf: introduce BPF_RAW_TRACEPOINT)
-=======
+
 	BPF_BTF_GET_FD_BY_ID = 19,
->>>>>>> 4e77fc2aac7f (bpf: btf: Introduce BTF ID)
+
 };
 
 enum bpf_map_type {
@@ -122,8 +115,6 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_PERCPU_ARRAY,
 	BPF_MAP_TYPE_STACK_TRACE,
 	BPF_MAP_TYPE_CGROUP_ARRAY,
-<<<<<<< HEAD
-=======
 	BPF_MAP_TYPE_LRU_HASH,
 	BPF_MAP_TYPE_LRU_PERCPU_HASH,
 	BPF_MAP_TYPE_LPM_TRIE,
@@ -137,7 +128,6 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE = 21,
 	BPF_MAP_TYPE_SK_STORAGE = 24,
 	BPF_MAP_TYPE_DEVMAP_HASH = 25,
->>>>>>> 8480b85ba5fb (bpf: introduce new bpf cpu map type BPF_MAP_TYPE_CPUMAP)
 };
 
 enum bpf_prog_type {
@@ -236,8 +226,8 @@ enum bpf_attach_type {
 #define BPF_F_ALLOW_OVERRIDE	(1U << 0)
 #define BPF_F_ALLOW_MULTI	(1U << 1)
 
-<<<<<<< HEAD
-=======
+
+
 /* If BPF_F_STRICT_ALIGNMENT is used in BPF_PROG_LOAD command, the
  * verifier will perform strict alignment checking as if the kernel
  * has been built with CONFIG_EFFICIENT_UNALIGNED_ACCESS not set,
@@ -245,10 +235,9 @@ enum bpf_attach_type {
  */
 #define BPF_F_STRICT_ALIGNMENT	(1U << 0)
 
-<<<<<<< HEAD
+
 /* when bpf_ldimm64->src_reg == BPF_PSEUDO_MAP_FD, bpf_ldimm64->imm == fd */
->>>>>>> 79362c5a0fad (bpf: squash of log related commits)
-=======
+
 /* When BPF ldimm64's insn[0].src_reg != 0 then this can have
  * two extensions:
  *
@@ -260,7 +249,7 @@ enum bpf_attach_type {
  * ldimm64 rewrite:  address of map      address of map[0]+offset
  * verifier type:    CONST_PTR_TO_MAP    PTR_TO_MAP_VALUE
  */
->>>>>>> 9c10dc89bf41 (bpf: implement lookup-free direct value access for maps)
+
 #define BPF_PSEUDO_MAP_FD	1
 #define BPF_PSEUDO_MAP_VALUE	2
 
@@ -287,9 +276,9 @@ union bpf_attr {
 		__u32	key_size;	/* size of key in bytes */
 		__u32	value_size;	/* size of value in bytes */
 		__u32	max_entries;	/* max number of entries in a map */
-<<<<<<< HEAD
+
 		__u32	map_flags;	/* prealloc or not */
-=======
+
 		__u32	map_flags;	/* BPF_MAP_CREATE related
 					 * flags defined above.
 					 */
@@ -299,18 +288,15 @@ union bpf_attr {
 					 */
 		char	map_name[BPF_OBJ_NAME_LEN];
 		__u32	map_ifindex;	/* ifindex of netdev to create on */
-<<<<<<< HEAD
->>>>>>> c63653347609 (bpf: offload: add map offload infrastructure)
-=======
+
+
+
 		__u32	btf_fd;		/* fd pointing to a BTF type data */
-<<<<<<< HEAD
+
 		__u32	btf_key_id;	/* BTF type_id of the key */
 		__u32	btf_value_id;	/* BTF type_id of the value */
->>>>>>> 4dea4b0439ca (bpf: btf: Add pretty print support to the basic arraymap)
-=======
 		__u32	btf_key_type_id;	/* BTF type_id of the key */
 		__u32	btf_value_type_id;	/* BTF type_id of the value */
->>>>>>> 0258195c378c (bpf: btf: Rename btf_key_id and btf_value_id in bpf_map_info)
 	};
 
 	struct { /* anonymous struct used by BPF_MAP_*_ELEM commands */

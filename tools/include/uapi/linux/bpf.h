@@ -92,8 +92,6 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_PERCPU_ARRAY,
 	BPF_MAP_TYPE_STACK_TRACE,
 	BPF_MAP_TYPE_CGROUP_ARRAY,
-<<<<<<< HEAD
-=======
 	BPF_MAP_TYPE_LRU_HASH,
 	BPF_MAP_TYPE_LRU_PERCPU_HASH,
 	BPF_MAP_TYPE_LPM_TRIE,
@@ -102,7 +100,6 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_DEVMAP,
 	BPF_MAP_TYPE_SOCKMAP,
 	BPF_MAP_TYPE_CPUMAP,
->>>>>>> 8480b85ba5fb (bpf: introduce new bpf cpu map type BPF_MAP_TYPE_CPUMAP)
 };
 
 enum bpf_prog_type {

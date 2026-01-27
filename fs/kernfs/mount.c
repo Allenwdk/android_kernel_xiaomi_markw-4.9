@@ -330,7 +330,7 @@ struct super_block *kernfs_pin_sb(struct kernfs_root *root, const void *ns)
 
 void __init kernfs_init(void)
 {
-	init_kernfs_file_pool();
+	/* init_kernfs_file_pool() - function removed, no longer needed */
 
 	/*
 	 * the slab is freed in RCU context, so kernfs_find_and_get_node_by_ino
@@ -339,6 +339,6 @@ void __init kernfs_init(void)
 	 * nodes.
 	 */
 	kernfs_node_cache = kmem_cache_create("kernfs_node_cache",
-					      sizeof(struct kernfs_node),
-					      0, SLAB_PANIC, NULL);
+			      sizeof(struct kernfs_node),
+			      0, SLAB_PANIC, NULL);
 }

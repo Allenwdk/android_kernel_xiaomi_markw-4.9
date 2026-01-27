@@ -949,10 +949,6 @@ enum hrtimer_restart tcp_pace_kick(struct hrtimer *timer)
  * but is not always installed/used.
  * Return true if TCP stack should pace packets itself.
  */
-static bool tcp_needs_internal_pacing(const struct sock *sk)
-{
-	return smp_load_acquire(&sk->sk_pacing_status) == SK_PACING_NEEDED;
-}
 
 static void tcp_internal_pacing(struct sock *sk, const struct sk_buff *skb)
 {

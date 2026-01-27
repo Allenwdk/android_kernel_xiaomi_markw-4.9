@@ -230,16 +230,14 @@ static int build_prologue(struct jit_ctx *ctx)
 	/* Set up BPF prog stack base register */
 	emit(A64_MOV(1, fp, A64_SP), ctx);
 
-	if (!ebpf_from_cbpf) {
-		/* Initialize tail_call_cnt */
-		emit(A64_MOVZ(1, tcc, 0, 0), ctx);
+	/* Initialize tail_call_cnt */
+	emit(A64_MOVZ(1, tcc, 0, 0), ctx);
 
-		cur_offset = ctx->idx - idx0;
-		if (cur_offset != PROLOGUE_OFFSET) {
-			pr_err_once("PROLOGUE_OFFSET = %d, expected %d!\n",
-				    cur_offset, PROLOGUE_OFFSET);
-			return -1;
-		}
+	cur_offset = ctx->idx - idx0;
+	if (cur_offset != PROLOGUE_OFFSET) {
+		pr_err_once("PROLOGUE_OFFSET = %d, expected %d!\n",
+			cur_offset, PROLOGUE_OFFSET);
+		return -1;
 	}
 
 	ctx->stack_size = STACK_ALIGN(prog->aux->stack_depth);
@@ -948,7 +946,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
 		goto out;
 	}
 
-	if (build_prologue(&ctx, was_classic)) {
+	if (build_prologue(&ctx)) {
 		prog = orig_prog;
 		goto out_off;
 	}
@@ -971,7 +969,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
 skip_init_ctx:
 	ctx.idx = 0;
 
-	build_prologue(&ctx, was_classic);
+	build_prologue(&ctx);
 
 	if (build_body(&ctx, extra_pass)) {
 		bpf_jit_binary_free(header);

@@ -312,28 +312,12 @@ int bpf_prog_calc_tag(struct bpf_prog *fp)
 	return 0;
 }
 
-static void bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta)
-{
-	const s32 off_min = S16_MIN, off_max = S16_MAX;
-	s32 off = insn->off;
 
-	if (curr < pos && curr + off + 1 > pos)
-		off += delta;
-	else if (curr > pos + delta && curr + off + 1 <= pos + delta)
-		off -= delta;
-	if (off < off_min || off > off_max)
-		return -ERANGE;
-	if (!probe_pass)
-		insn->off = off;
-	return 0;
-}
 
-static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta,
-			    const bool probe_pass)
+static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta)
 {
-	u32 i, insn_cnt = prog->len + (probe_pass ? delta : 0);
-	struct bpf_insn *insn = prog->insnsi;
 	u32 i, insn_cnt = prog->len;
+	struct bpf_insn *insn = prog->insnsi;
 	bool pseudo_call;
 	u8 code;
 	int off;
@@ -366,7 +350,7 @@ static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta,
 			insn->off = off;
 	}
 
-	return ret;
+	return 0;
 }
 
 static void bpf_adj_linfo(struct bpf_prog *prog, u32 off, u32 delta)
@@ -410,7 +394,7 @@ struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 	 * we afterwards may not fail anymore.
 	 */
 	if (insn_adj_cnt > cnt_max &&
-	    bpf_adj_branches(prog, off, insn_delta, true))
+	    bpf_adj_branches(prog, off, insn_delta))
 		return NULL;
 
 	/* Several new instructions need to be inserted. Make room
@@ -442,7 +426,7 @@ struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 	 * the ship has sailed to reverse to the original state. An
 	 * overflow cannot happen at this point.
 	 */
-	BUG_ON(bpf_adj_branches(prog_adj, off, insn_delta, false));
+	BUG_ON(bpf_adj_branches(prog_adj, off, insn_delta));
 
 	bpf_adj_linfo(prog_adj, off, insn_delta);
 
@@ -1231,6 +1215,7 @@ static u64 ___bpf_prog_run(u64 *regs, const struct bpf_insn *insn)
 	u32 tail_call_cnt = 0;
 	void *ptr;
 	int off;
+	u8 tmp[16];
 
 #define CONT	 ({ insn++; goto select_insn; })
 #define CONT_JMP ({ insn++; goto select_insn; })
@@ -1678,7 +1663,7 @@ EVAL4(DEFINE_BPF_PROG_RUN_ARGS, 416, 448, 480, 512);
 
 #define PROG_NAME_LIST(stack_size) PROG_NAME(stack_size),
 
-static unsigned int (*interpreters[])(const void *ctx,
+static unsigned int (*interpreters[])(const struct sk_buff *ctx,
 				      const struct bpf_insn *insn) = {
 EVAL6(PROG_NAME_LIST, 32, 64, 96, 128, 160, 192)
 EVAL6(PROG_NAME_LIST, 224, 256, 288, 320, 352, 384)
@@ -1765,9 +1750,9 @@ struct bpf_prog *bpf_prog_select_runtime(struct bpf_prog *fp, int *err)
 #ifndef CONFIG_BPF_JIT_ALWAYS_ON
 	u32 stack_depth = max_t(u32, fp->aux->stack_depth, 1);
 
-	fp->bpf_func = interpreters[(round_up(stack_depth, 32) / 32) - 1];
+	fp->bpf_func = (unsigned int (*)(const void *, const struct bpf_insn *))interpreters[(round_up(stack_depth, 32) / 32) - 1];
 #else
-	fp->bpf_func = (void *) __bpf_prog_ret0_warn;
+	fp->bpf_func = (unsigned int (*)(const void *, const struct bpf_insn *)) __bpf_prog_ret0_warn;
 #endif
 
 	/* eBPF JITs can rewrite the program in case constant

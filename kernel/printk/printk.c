@@ -722,7 +722,18 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 	size_t len = iov_iter_count(from);
 	ssize_t ret = len;
 
-	return len;
+	/*
+	 * NOTE: this kernel previously carried a downstream hack (commit
+	 * 930810f1e75df "power: Silence charger log spam") that made this
+	 * function return immediately, silently discarding every message
+	 * written to /dev/kmsg by userspace.
+	 *
+	 * That also discarded all of init's and apexd's KernelLogger output,
+	 * which made early-boot failures impossible to diagnose: init loads
+	 * the SELinux policy, runs the apex bootstrap and logs the result
+	 * through /dev/kmsg only.  Restore the upstream behaviour so that
+	 * userspace logging works again.
+	 */
 	if (!user || len > LOG_LINE_MAX)
 		return -EINVAL;
 
@@ -765,8 +776,20 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 		}
 	}
 
+	/*
+	 * Downstream Qualcomm/CAF hack: drop charger messages coming from the
+	 * health HAL to keep the kernel log quiet.
+	 *
+	 * This used to call kfree(buf) when buf was a kmalloc'd pointer.  Commit
+	 * c97e813021f1 ("printk: use buffer from the stack space") turned buf
+	 * into a stack array and left the kfree() behind, so the call above
+	 * freed a stack address.  It was harmless only because userspace writes
+	 * to /dev/kmsg were disabled outright; with logging enabled it triggers
+	 * "Kernel BUG at kfree" (seen as LR=devkmsg_write+0x184, PC=kfree+0x270)
+	 * every time the health HAL logs, panicking the device during recovery
+	 * and normal boot.  Just drop the message without freeing anything.
+	 */
 	if (strncmp("healthd", line, 7) == 0) {
-		kfree(buf);
 		return len;
 	}
 

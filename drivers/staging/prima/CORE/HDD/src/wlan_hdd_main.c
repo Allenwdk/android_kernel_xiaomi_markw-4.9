@@ -15083,11 +15083,11 @@ static int hdd_driver_init( void)
 
 #ifdef HAVE_WCNSS_CAL_DOWNLOAD
    /* wait until WCNSS driver downloads NV */
-   while (!wcnss_device_ready() && 10 >= ++max_retries) {
+   while (!wcnss_device_ready() && 120 >= ++max_retries) {
        msleep(1000);
    }
 
-   if (max_retries >= 10) {
+   if (max_retries >= 120) {
       hddLog(VOS_TRACE_LEVEL_FATAL,"%s: WCNSS driver not ready", __func__);
       vos_wake_lock_destroy(&wlan_wake_lock);
 #ifdef WLAN_LOGGING_SOCK_SVC_ENABLE
@@ -15198,9 +15198,36 @@ static int __init hdd_module_init ( void)
    return hdd_driver_init();
 }
 #else /* #ifdef MODULE */
+static int hdd_driver_init( void);
+static void hdd_builtin_init_work(struct work_struct *work);
+static DECLARE_WORK(hdd_builtin_init_work_item, hdd_builtin_init_work);
+
+/*
+ * Built-in (CONFIG_PRONTO_WLAN=y) build.
+ *
+ * Upstream leaves this empty and relies on userspace writing
+ * /sys/module/wlan/parameters/fwpath to kick off hdd_driver_init() through
+ * fwpath_changed_handler().  On this target nothing ever writes that parameter
+ * (and writing it from an init action deadlocks, because the handler runs
+ * synchronously in the writer's context and blocks on wcnss_device_ready(),
+ * while wcnss-service - the thing that powers WCNSS up - can then never run).
+ * The result was that wlan0/p2p0 were never registered, the wifi HAL's
+ * wifi_wait_for_driver_ready() timed out and WiFi stayed permanently disabled.
+ *
+ * Run the initialisation from a workqueue instead: it is asynchronous, so it
+ * cannot block init, and hdd_driver_init() already waits for the WCNSS firmware
+ * to finish its NV download before registering the netdevs.
+ */
+static void hdd_builtin_init_work(struct work_struct *work)
+{
+   int ret = hdd_driver_init();
+
+   pr_info("%s: built-in driver init returned %d\n", WLAN_MODULE_NAME, ret);
+}
+
 static int __init hdd_module_init ( void)
 {
-   /* Driver initialization is delayed to fwpath_changed_handler */
+   schedule_work(&hdd_builtin_init_work_item);
    return 0;
 }
 #endif /* #ifdef MODULE */

@@ -128,7 +128,7 @@ IF_HAVE_PG_IDLE(PG_idle,		"idle"		)
 #if defined(CONFIG_X86)
 #define __VM_ARCH_SPECIFIC_2 {VM_MPX,		"mpx"		}
 #else
-#define __VM_ARCH_SPECIFIC_2 {VM_ARCH_2,	"arch_2"	}
+#define __VM_ARCH_SPECIFIC_2 {VM_WIPEONFORK,	"wipeonfork"	}
 #endif
 
 #ifdef CONFIG_MEM_SOFT_DIRTY

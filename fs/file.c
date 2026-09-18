@@ -17,6 +17,7 @@
 #include <linux/vmalloc.h>
 #include <linux/file.h>
 #include <linux/fdtable.h>
+#include <uapi/linux/close_range.h>
 #include <linux/bitops.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
@@ -654,6 +655,62 @@ int __close_fd(struct files_struct *files, unsigned fd)
 out_unlock:
 	spin_unlock(&files->file_lock);
 	return -EBADF;
+}
+
+/*
+ * close_range() - backport of the Linux 5.9 system call (CLOSE_RANGE_CLOEXEC
+ * was added in 5.11).
+ *
+ * Android's bionic implements posix_spawn()'s POSIX_SPAWN_CLOEXEC_DEFAULT flag
+ * purely in terms of this syscall:
+ *
+ *     if ((flags & POSIX_SPAWN_CLOEXEC_DEFAULT) != 0) {
+ *         if (close_range(3, ~0U, CLOSE_RANGE_CLOEXEC)) _exit(127);
+ *     }
+ *
+ * On a kernel that lacks it the child exits with status 127 before ever calling
+ * execve(), so every such posix_spawn() silently fails.  On this device that
+ * broke netd's dnsmasq spawn (soft AP tore down immediately with
+ * "Failed to send update command to dnsmasq (Broken pipe)") and clatd.
+ *
+ * Returns 0 on success, -EINVAL for an inverted range or unsupported flags.
+ */
+SYSCALL_DEFINE3(close_range, unsigned int, fd, unsigned int, max_fd, unsigned int, flags)
+{
+	struct files_struct *files = current->files;
+	struct fdtable *fdt;
+	unsigned int i;
+
+	if (fd > max_fd)
+		return -EINVAL;
+
+	if (flags & ~(unsigned int)(CLOSE_RANGE_UNSHARE | CLOSE_RANGE_CLOEXEC))
+		return -EINVAL;
+
+	if (flags & CLOSE_RANGE_UNSHARE)
+		return -EINVAL;	/* not implemented on this legacy kernel */
+
+	/* Clamp once so that callers may pass ~0U to mean "every open fd". */
+	spin_lock(&files->file_lock);
+	fdt = files_fdtable(files);
+	if (max_fd >= fdt->max_fds)
+		max_fd = fdt->max_fds - 1;
+	spin_unlock(&files->file_lock);
+
+	if (flags & CLOSE_RANGE_CLOEXEC) {
+		for (i = fd; i <= max_fd; i++) {
+			spin_lock(&files->file_lock);
+			fdt = files_fdtable(files);
+			if (i < fdt->max_fds && fdt->fd[i])
+				__set_close_on_exec(i, fdt);
+			spin_unlock(&files->file_lock);
+		}
+	} else {
+		for (i = fd; i <= max_fd; i++)
+			__close_fd(files, i);
+	}
+
+	return 0;
 }
 
 void do_close_on_exec(struct files_struct *files)

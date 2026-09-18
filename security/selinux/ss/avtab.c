@@ -552,15 +552,25 @@ int avtab_read_item(struct avtab *a, void *fp, struct policydb *pol,
 			printk(KERN_ERR "SELinux: avtab: truncated entry\n");
 			return rc;
 		}
-		if (avtab_android_m_compat ||
-			    ((xperms.specified != AVTAB_XPERMS_IOCTLFUNCTION) &&
-			    (xperms.specified != AVTAB_XPERMS_IOCTLDRIVER) &&
-			    (vers == POLICYDB_VERSION_XPERMS_IOCTL))) {
+		/*
+		 * The legacy Android M extended permission layout stores only the
+		 * driver byte, whereas the modern layout stores the permission type
+		 * followed by the driver byte.  Only entries whose key was encoded
+		 * with the Android M "optype" bits use the legacy layout, which is
+		 * exactly what android_m_compat_optype records for this entry.
+		 *
+		 * Testing the sticky avtab_android_m_compat flag here (or guessing
+		 * from an unrecognised xperms.specified value) switched the layout
+		 * permanently for the rest of the policy, which desynchronised the
+		 * avtab as soon as a policy used an extended permission other than
+		 * ioctl - e.g. the nlmsg extended permissions (specified == 0x03)
+		 * introduced in Android 16.  That desync surfaced as
+		 * "SELinux: avtab: invalid type or class" and made the policy
+		 * impossible to load on this kernel.
+		 */
+		if (android_m_compat_optype) {
 			xperms.driver = xperms.specified;
-			if (android_m_compat_optype)
-				xperms.specified = AVTAB_XPERMS_IOCTLDRIVER;
-			else
-				xperms.specified = AVTAB_XPERMS_IOCTLFUNCTION;
+			xperms.specified = AVTAB_XPERMS_IOCTLDRIVER;
 			avtab_android_m_compat_set();
 		} else {
 			rc = next_entry(&xperms.driver, fp, sizeof(u8));

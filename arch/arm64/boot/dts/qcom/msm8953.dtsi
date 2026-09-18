@@ -124,6 +124,15 @@
 			label = "cont_splash_mem";
 		};
 
+		ramoops@91400000 {
+			compatible = "ramoops";
+			reg = <0x0 0x91400000 0x0 0x100000>;
+			record-size = <0x20000>;
+			console-size = <0x40000>;
+			pmsg-size = <0x20000>;
+			ftrace-size = <0x20000>;
+		};
+
 		adsp_shmem_device_mem: adsp_shmem_device_region@0xc0100000 {
 			compatible = "shared-dma-pool";
 			label = "adsp_shmem_device_mem";

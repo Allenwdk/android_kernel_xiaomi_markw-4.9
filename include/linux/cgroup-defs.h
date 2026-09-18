@@ -68,6 +68,18 @@ enum {
 enum {
 	CGRP_ROOT_NOPREFIX	= (1 << 1), /* mounted subsystems have no named prefix */
 	CGRP_ROOT_XATTR		= (1 << 2), /* supports extended attributes */
+
+	/*
+	 * Enable cpuset controller in v1 cgroup to use v2 behavior.
+	 *
+	 * Backport of upstream commit e1cba4b85daa ("cgroup: Add mount flag to
+	 * enable cpuset to use v2 behavior in v1 cgroup").  Android 16 mounts
+	 * the v1 cpuset controller with the "cpuset_v2_mode" option (see
+	 * system/core commit cb48d31d1); without this flag the kernel rejects
+	 * the mount with -ENOENT ("unknown subsystem"), which aborts the whole
+	 * cgroup setup in init and prevents any service from starting.
+	 */
+	CGRP_ROOT_CPUSET_V2_MODE = (1 << 3),
 };
 
 /* cftype->flags */

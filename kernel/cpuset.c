@@ -216,6 +216,17 @@ static inline int is_spread_slab(const struct cpuset *cs)
 	return test_bit(CS_SPREAD_SLAB, &cs->flags);
 }
 
+/*
+ * True when this cpuset belongs to a v1 hierarchy which was mounted with the
+ * "cpuset_v2_mode" option, i.e. it should follow cpuset v2 semantics on CPU
+ * hotplug (cpuset.cpus is not clamped, only effective_cpus follows the online
+ * CPUs).  Backport of upstream commit e1cba4b85daa, needed by Android 16.
+ */
+static inline int is_cpuset_v2_mode(const struct cpuset *cs)
+{
+	return cs->css.cgroup->root->flags & CGRP_ROOT_CPUSET_V2_MODE;
+}
+
 static struct cpuset top_cpuset = {
 	.flags = ((1 << CS_ONLINE) | (1 << CS_CPU_EXCLUSIVE) |
 		  (1 << CS_MEM_EXCLUSIVE)),
@@ -2321,7 +2332,14 @@ retry:
 	cpus_updated = !cpumask_equal(&new_cpus, cs->effective_cpus);
 	mems_updated = !nodes_equal(new_mems, cs->effective_mems);
 
-	if (cgroup_subsys_on_dfl(cpuset_cgrp_subsys))
+	/*
+	 * In cpuset_v2_mode, cpuset.cpus/cpuset.mems are left untouched by
+	 * hotplug events -- only effective_cpus/effective_mems follow the
+	 * online CPUs, exactly like cpuset v2.  This is what lets a cpuset
+	 * pick up CPUs again once they are onlined, which is the behaviour
+	 * Android 16 relies on.  Upstream: e1cba4b85daa.
+	 */
+	if (cgroup_subsys_on_dfl(cpuset_cgrp_subsys) || is_cpuset_v2_mode(cs))
 		hotplug_update_tasks(cs, &new_cpus, &new_mems,
 				     cpus_updated, mems_updated);
 	else

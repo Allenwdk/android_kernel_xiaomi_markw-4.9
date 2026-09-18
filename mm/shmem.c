@@ -2111,6 +2111,24 @@ out_nomem:
 
 static int shmem_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct shmem_inode_info *info = SHMEM_I(file_inode(file));
+
+	/*
+	 * Backport of the Linux 5.1 F_SEAL_FUTURE_WRITE seal: once it is set no
+	 * *new* writable mapping of the file may be created.  Mappings that
+	 * already existed when the seal was applied stay writable, which is what
+	 * the seal's users (Android's Parcel/Bitmap blobs, MemoryHeapBase and
+	 * ashmem_set_prot_region) rely on.
+	 *
+	 * Kernel 4.9 knows nothing about this flag, so fcntl(F_ADD_SEALS,
+	 * F_SEAL_FUTURE_WRITE) used to fail with -EINVAL; that surfaced in
+	 * userspace as
+	 *   java.lang.RuntimeException: Could not copy bitmap to parcel blob.
+	 * whenever an app put an immutable bitmap into a Binder parcel.
+	 */
+	if ((vma->vm_flags & VM_WRITE) && (info->seals & F_SEAL_FUTURE_WRITE))
+		return -EPERM;
+
 	file_accessed(file);
 	vma->vm_ops = &shmem_vm_ops;
 	if (IS_ENABLED(CONFIG_TRANSPARENT_HUGE_PAGECACHE) &&
@@ -2571,7 +2589,8 @@ continue_resched:
 #define F_ALL_SEALS (F_SEAL_SEAL | \
 		     F_SEAL_SHRINK | \
 		     F_SEAL_GROW | \
-		     F_SEAL_WRITE)
+		     F_SEAL_WRITE | \
+		     F_SEAL_FUTURE_WRITE)
 
 int shmem_add_seals(struct file *file, unsigned int seals)
 {
@@ -2620,6 +2639,20 @@ int shmem_add_seals(struct file *file, unsigned int seals)
 
 	if (info->seals & F_SEAL_SEAL) {
 		error = -EPERM;
+		goto unlock;
+	}
+
+	/*
+	 * Backport of the Linux 5.1 F_SEAL_FUTURE_WRITE seal (Android 16's
+	 * bionic/libhwui/libbinder require it, see below).
+	 *
+	 * SEAL_WRITE and SEAL_FUTURE_WRITE are mutually exclusive: SEAL_WRITE
+	 * demands that no writable mapping exists at all, while
+	 * SEAL_FUTURE_WRITE deliberately lets already existing writable
+	 * mappings keep working and only forbids *new* ones.
+	 */
+	if ((seals & F_SEAL_WRITE) && (info->seals & F_SEAL_FUTURE_WRITE)) {
+		error = -EINVAL;
 		goto unlock;
 	}
 
